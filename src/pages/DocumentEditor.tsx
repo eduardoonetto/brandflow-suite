@@ -137,6 +137,7 @@ export default function DocumentEditor() {
         institutionId: 'inst-1',
         createdBy: 'user-1',
         variables: variables.map(v => ({ ...v, value: values[v.key] })),
+        signers: [],
         signatures: [],
       });
       navigate('/documents');

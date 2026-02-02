@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   FileText, 
   LayoutDashboard, 
@@ -7,14 +7,19 @@ import {
   Settings, 
   Building2,
   BarChart3,
-  FolderOpen,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Plus
+  Plus,
+  FileStack,
+  Clock,
+  CheckCircle,
+  XCircle,
+  FileClock
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useInstitution } from '@/context/InstitutionContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { 
@@ -22,27 +27,42 @@ import {
   TooltipContent,
   TooltipTrigger 
 } from '@/components/ui/tooltip';
+import { InstitutionSelector } from './InstitutionSelector';
 
 interface AppSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
 
-const mainNavItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: FileText, label: 'Documentos', path: '/documents' },
-  { icon: BarChart3, label: 'Reportes', path: '/reports' },
-];
-
-const adminNavItems = [
-  { icon: Building2, label: 'Instituciones', path: '/admin/institutions' },
-  { icon: Users, label: 'Usuarios', path: '/admin/users' },
-  { icon: Settings, label: 'Configuración', path: '/settings' },
-];
-
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
-  const { user, institution, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { theme } = useTheme();
+  const { isPersonalInstitution, currentInstitution } = useInstitution();
+  const navigate = useNavigate();
+
+  const mainNavItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+    { icon: FileStack, label: 'Plantillas', path: '/templates' },
+  ];
+
+  const documentNavItems = [
+    { icon: Clock, label: 'Por Firmar', path: '/documents/pending', badge: 'pending' },
+    { icon: FileClock, label: 'En Proceso', path: '/documents/in-progress', badge: 'inProgress' },
+    { icon: CheckCircle, label: 'Firmados', path: '/documents/signed', badge: 'signed' },
+    { icon: XCircle, label: 'Rechazados', path: '/documents/rejected', badge: 'rejected' },
+  ];
+
+  const adminNavItems = [
+    { icon: Building2, label: 'Instituciones', path: '/admin/institutions' },
+    { icon: Users, label: 'Usuarios', path: '/admin/users' },
+    { icon: BarChart3, label: 'Reportes', path: '/reports' },
+    { icon: Settings, label: 'Configuración', path: '/settings' },
+  ];
+
+  // For personal institutions, hide Users menu
+  const filteredAdminItems = isPersonalInstitution 
+    ? adminNavItems.filter(item => item.path !== '/admin/users')
+    : adminNavItems;
 
   const NavItem = ({ icon: Icon, label, path }: { icon: React.ElementType; label: string; path: string }) => {
     const content = (
@@ -96,7 +116,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
               <FileText className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="font-semibold text-sidebar-foreground">
-              {institution?.name || 'SignFlow'}
+              SignFlow
             </span>
           </div>
         )}
@@ -107,25 +127,46 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         )}
       </div>
 
+      {/* Institution Selector */}
+      {!collapsed && (
+        <div className="p-3 border-b border-sidebar-border">
+          <InstitutionSelector />
+        </div>
+      )}
+
       {/* New Document Button */}
       <div className={cn('p-3', collapsed && 'px-2')}>
-        <NavLink to="/documents/new">
-          <Button 
-            className={cn(
-              'w-full bg-gradient-primary hover:opacity-90 transition-opacity',
-              collapsed && 'px-0'
-            )}
-          >
-            <Plus className="h-4 w-4" />
-            {!collapsed && <span className="ml-2">Nuevo Documento</span>}
-          </Button>
-        </NavLink>
+        <Button 
+          onClick={() => navigate('/documents/new')}
+          className={cn(
+            'w-full bg-gradient-primary hover:opacity-90 transition-opacity',
+            collapsed && 'px-0'
+          )}
+        >
+          <Plus className="h-4 w-4" />
+          {!collapsed && <span className="ml-2">Nuevo Documento</span>}
+        </Button>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-2">
         <div className="space-y-1">
           {mainNavItems.map(item => (
+            <NavItem key={item.path} {...item} />
+          ))}
+        </div>
+
+        {/* Documents section */}
+        {!collapsed && (
+          <div className="mt-4 mb-2 px-3">
+            <span className="text-xs font-medium text-sidebar-muted uppercase tracking-wider">
+              Documentos
+            </span>
+          </div>
+        )}
+        {collapsed && <div className="my-4 border-t border-sidebar-border" />}
+        <div className="space-y-1">
+          {documentNavItems.map(item => (
             <NavItem key={item.path} {...item} />
           ))}
         </div>
@@ -141,7 +182,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             )}
             {collapsed && <div className="my-4 border-t border-sidebar-border" />}
             <div className="space-y-1">
-              {adminNavItems.map(item => (
+              {filteredAdminItems.map(item => (
                 <NavItem key={item.path} {...item} />
               ))}
             </div>

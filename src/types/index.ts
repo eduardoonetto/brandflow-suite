@@ -1,19 +1,28 @@
 // Core entity types for the document signing platform
 
 export type DocumentStatus = 'draft' | 'pending' | 'signed' | 'rejected';
-
+export type SignatureStatus = 'pending' | 'signed' | 'rejected';
 export type SignatureMethod = 'draw' | 'certificate' | 'typed';
+export type InstitutionType = 'personal' | 'organization';
+export type UserRole = 'superadmin' | 'admin' | 'user';
+export type InstitutionRole = 'Admin' | 'RRHH' | 'Trabajador' | 'Finanzas' | 'Legal' | 'Gerencia';
 
 export interface Institution {
   id: string;
   name: string;
-  taxId: string;
-  apiKey: string;
-  allowedDomain: string;
+  type: InstitutionType;
+  taxId?: string;
+  apiKey?: string;
+  allowedDomain?: string;
   primaryColor: string;
   logoUrl: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface UserInstitutionRole {
+  institutionId: string;
+  role: InstitutionRole;
 }
 
 export interface User {
@@ -21,13 +30,20 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
-  institutionId: string;
-  departmentRoles: string[];
+  institutionId: string; // Personal institution
+  institutions: UserInstitutionRole[]; // All institutions with roles
   avatarUrl?: string;
   createdAt: Date;
 }
 
-export type UserRole = 'superadmin' | 'admin' | 'user';
+export interface InstitutionUser {
+  id: string;
+  userId: string;
+  institutionId: string;
+  role: InstitutionRole;
+  user: User;
+  joinedAt: Date;
+}
 
 export interface Department {
   id: string;
@@ -43,18 +59,54 @@ export interface Tag {
   institutionId: string;
 }
 
-export interface Document {
+// Document Template - reusable document structure
+export interface DocumentTemplate {
   id: string;
   title: string;
+  description: string;
+  content: string;
+  category: string;
+  tags: Tag[];
+  institutionId: string;
+  createdBy: string;
+  variables: DocumentVariable[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Document Signer - people who need to sign
+export interface DocumentSigner {
+  id: string;
+  documentId: string;
+  userId?: string;
+  email: string;
+  name: string;
+  role?: string;
+  order: number;
+  status: SignatureStatus;
+  signedAt?: Date;
+  rejectedAt?: Date;
+  rejectionReason?: string;
+  signature?: Signature;
+}
+
+// Document - created from template with filled variables
+export interface Document {
+  id: string;
+  templateId?: string;
+  title: string;
+  description?: string;
   content: string;
   status: DocumentStatus;
   tags: Tag[];
   institutionId: string;
   createdBy: string;
-  assignedTo?: string;
-  assignedRole?: string;
   variables: DocumentVariable[];
+  signers: DocumentSigner[];
   signatures: Signature[];
+  fileSize?: string;
+  expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   finalizedAt?: Date;
@@ -120,4 +172,34 @@ export interface ThemeConfig {
   primaryColor: string;
   logoUrl: string;
   institutionName: string;
+}
+
+// Report types
+export interface ReportConfig {
+  id: string;
+  name: string;
+  filters: ReportFilter[];
+  columns: string[];
+  institutionId: string;
+  createdBy: string;
+  createdAt: Date;
+}
+
+export interface ReportFilter {
+  field: string;
+  operator: 'equals' | 'contains' | 'gte' | 'lte' | 'between';
+  value: string | string[] | { from: string; to: string };
+}
+
+export interface ReportJob {
+  id: string;
+  name: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  totalRecords?: number;
+  processedRecords?: number;
+  downloadUrl?: string;
+  error?: string;
+  createdAt: Date;
+  completedAt?: Date;
 }
