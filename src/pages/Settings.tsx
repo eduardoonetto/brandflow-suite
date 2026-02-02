@@ -148,14 +148,14 @@ export default function Settings() {
               </div>
 
               <div className="space-y-2">
-                <Label>Departamentos</Label>
+                <Label>Instituciones y Roles</Label>
                 <div className="flex flex-wrap gap-2">
-                  {user?.departmentRoles.map(role => (
+                  {user?.institutions.map(inst => (
                     <span
-                      key={role}
+                      key={inst.institutionId}
                       className="px-3 py-1 bg-muted rounded-full text-sm"
                     >
-                      {role}
+                      {inst.role}
                     </span>
                   ))}
                 </div>

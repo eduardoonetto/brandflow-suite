@@ -1,0 +1,249 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useDocuments } from '@/context/DocumentContext';
+import { DocumentSignatureCard } from '@/components/documents/DocumentSignatureCard';
+import { SignatureModal } from '@/components/signature/SignatureModal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+} from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { 
+  Search,
+  Clock,
+  FileClock,
+  CheckCircle,
+  XCircle,
+  FileText,
+  Filter,
+  Upload
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Document } from '@/types';
+
+type DocumentTab = 'pending' | 'in-progress' | 'signed' | 'rejected';
+
+interface DocumentsListPageProps {
+  initialTab?: DocumentTab;
+}
+
+export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsListPageProps) {
+  const navigate = useNavigate();
+  const { 
+    pendingDocuments, 
+    inProgressDocuments, 
+    signedDocuments, 
+    rejectedDocuments,
+    updateDocument
+  } = useDocuments();
+  
+  const [activeTab, setActiveTab] = useState<DocumentTab>(initialTab);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+
+  const getDocumentsForTab = (): Document[] => {
+    let docs: Document[] = [];
+    switch (activeTab) {
+      case 'pending':
+        docs = pendingDocuments;
+        break;
+      case 'in-progress':
+        docs = inProgressDocuments;
+        break;
+      case 'signed':
+        docs = signedDocuments;
+        break;
+      case 'rejected':
+        docs = rejectedDocuments;
+        break;
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      docs = docs.filter(doc => 
+        doc.title.toLowerCase().includes(query) ||
+        doc.description?.toLowerCase().includes(query)
+      );
+    }
+
+    return docs;
+  };
+
+  const documents = getDocumentsForTab();
+
+  const handleSign = (doc: Document) => {
+    setSelectedDocument(doc);
+    setShowSignatureModal(true);
+  };
+
+  const handleSignatureComplete = () => {
+    if (selectedDocument) {
+      updateDocument(selectedDocument.id, { status: 'signed' });
+    }
+    setShowSignatureModal(false);
+    setSelectedDocument(null);
+  };
+
+  const tabConfig = [
+    { 
+      value: 'pending', 
+      label: 'Por Firmar', 
+      icon: Clock, 
+      count: pendingDocuments.length,
+      color: 'text-warning'
+    },
+    { 
+      value: 'in-progress', 
+      label: 'En Proceso', 
+      icon: FileClock, 
+      count: inProgressDocuments.length,
+      color: 'text-blue-500'
+    },
+    { 
+      value: 'signed', 
+      label: 'Firmados', 
+      icon: CheckCircle, 
+      count: signedDocuments.length,
+      color: 'text-success'
+    },
+    { 
+      value: 'rejected', 
+      label: 'Rechazados', 
+      icon: XCircle, 
+      count: rejectedDocuments.length,
+      color: 'text-destructive'
+    },
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Gestión de Documentos</h1>
+          <p className="text-muted-foreground">
+            Administra y firma tus documentos de forma digital
+          </p>
+        </div>
+        
+        <Button 
+          onClick={() => navigate('/documents/new')}
+          className="bg-gradient-primary hover:opacity-90"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Subir Documento
+        </Button>
+      </div>
+
+      {/* Search and filters */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar documentos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button variant="outline">
+          <Filter className="h-4 w-4 mr-2" />
+          Filtros
+        </Button>
+      </div>
+
+      {/* Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-warning/5 border-warning/20">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-bold">{pendingDocuments.length}</p>
+              <p className="text-sm text-muted-foreground">Por Firmar</p>
+            </div>
+            <Clock className="h-8 w-8 text-warning" />
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-500/5 border-blue-500/20">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-bold">{inProgressDocuments.length}</p>
+              <p className="text-sm text-muted-foreground">En Proceso</p>
+            </div>
+            <FileClock className="h-8 w-8 text-blue-500" />
+          </CardContent>
+        </Card>
+        <Card className="bg-success/5 border-success/20">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-bold">{signedDocuments.length}</p>
+              <p className="text-sm text-muted-foreground">Firmados</p>
+            </div>
+            <CheckCircle className="h-8 w-8 text-success" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DocumentTab)}>
+        <TabsList className="mb-4">
+          {tabConfig.map(tab => (
+            <TabsTrigger 
+              key={tab.value} 
+              value={tab.value}
+              className="gap-2"
+            >
+              <tab.icon className={cn('h-4 w-4', tab.color)} />
+              {tab.label}
+              <span className={cn(
+                'ml-1 px-1.5 py-0.5 rounded-full text-xs font-medium',
+                activeTab === tab.value 
+                  ? 'bg-primary/10 text-primary' 
+                  : 'bg-muted text-muted-foreground'
+              )}>
+                {tab.count}
+              </span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {tabConfig.map(tab => (
+          <TabsContent key={tab.value} value={tab.value} className="mt-0">
+            {documents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                  <FileText className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold mb-1">No hay documentos</h3>
+                <p className="text-muted-foreground text-sm">
+                  No tienes documentos en esta categoría
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {documents.map((doc) => (
+                  <DocumentSignatureCard
+                    key={doc.id}
+                    document={doc}
+                    showSignButton={activeTab === 'pending'}
+                    onSign={() => handleSign(doc)}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        ))}
+      </Tabs>
+
+      {/* Signature Modal */}
+      <SignatureModal
+        open={showSignatureModal}
+        onOpenChange={setShowSignatureModal}
+        onComplete={handleSignatureComplete}
+        documentTitle={selectedDocument?.title || ''}
+      />
+    </div>
+  );
+}

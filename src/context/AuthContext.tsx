@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { User, Institution } from '@/types';
+import { User, Institution, UserInstitutionRole } from '@/types';
 
 interface AuthContextValue {
   user: User | null;
@@ -17,6 +17,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const mockInstitution: Institution = {
   id: 'inst-1',
   name: 'Acme Corporation',
+  type: 'organization',
   taxId: '12-3456789',
   apiKey: 'ak_live_xxxxx',
   allowedDomain: 'acme.signflow.com',
@@ -26,13 +27,18 @@ const mockInstitution: Institution = {
   updatedAt: new Date(),
 };
 
+const mockUserInstitutions: UserInstitutionRole[] = [
+  { institutionId: 'inst-acme', role: 'Admin' },
+  { institutionId: 'inst-tech', role: 'RRHH' },
+];
+
 const mockUser: User = {
   id: 'user-1',
   email: 'admin@acme.com',
   name: 'John Smith',
   role: 'admin',
-  institutionId: 'inst-1',
-  departmentRoles: ['RRHH', 'Legal'],
+  institutionId: 'inst-personal',
+  institutions: mockUserInstitutions,
   createdAt: new Date(),
 };
 

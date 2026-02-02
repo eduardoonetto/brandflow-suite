@@ -53,10 +53,13 @@ export const mockAuthService: IAuthService = {
           email,
           name: 'John Smith',
           role: 'admin',
-          institutionId: 'inst-1',
-          departmentRoles: ['RRHH', 'Legal'],
+          institutionId: 'inst-personal',
+          institutions: [
+            { institutionId: 'inst-acme', role: 'Admin' },
+            { institutionId: 'inst-tech', role: 'RRHH' },
+          ],
           createdAt: new Date(),
-        },
+        } as User,
         token: 'mock-jwt-token',
       },
     };
@@ -79,6 +82,7 @@ export const mockAuthService: IAuthService = {
         data: {
           id: 'inst-1',
           name: 'Acme Corporation',
+          type: 'organization',
           taxId: '12-3456789',
           apiKey: 'ak_xxx',
           allowedDomain: 'acme.signflow.com',
@@ -86,7 +90,7 @@ export const mockAuthService: IAuthService = {
           logoUrl: '',
           createdAt: new Date(),
           updatedAt: new Date(),
-        },
+        } as Institution,
       };
     }
     return { success: true, data: null };
@@ -102,6 +106,7 @@ export const mockInstitutionService: IInstitutionService = {
         {
           id: 'inst-1',
           name: 'Acme Corporation',
+          type: 'organization',
           taxId: '12-3456789',
           apiKey: 'ak_live_xxxxx',
           allowedDomain: 'acme.signflow.com',
@@ -113,6 +118,7 @@ export const mockInstitutionService: IInstitutionService = {
         {
           id: 'inst-2',
           name: 'TechStart Inc',
+          type: 'organization',
           taxId: '98-7654321',
           apiKey: 'ak_live_yyyyy',
           allowedDomain: 'techstart.signflow.com',
@@ -121,7 +127,7 @@ export const mockInstitutionService: IInstitutionService = {
           createdAt: new Date(),
           updatedAt: new Date(),
         },
-      ],
+      ] as Institution[],
     };
   },
 
@@ -132,6 +138,7 @@ export const mockInstitutionService: IInstitutionService = {
       data: {
         id,
         name: 'Acme Corporation',
+        type: 'organization',
         taxId: '12-3456789',
         apiKey: 'ak_live_xxxxx',
         allowedDomain: 'acme.signflow.com',
@@ -139,7 +146,7 @@ export const mockInstitutionService: IInstitutionService = {
         logoUrl: '',
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
+      } as Institution,
     };
   },
 
@@ -152,7 +159,7 @@ export const mockInstitutionService: IInstitutionService = {
         id: `inst-${Date.now()}`,
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
+      } as Institution,
     };
   },
 
@@ -163,6 +170,7 @@ export const mockInstitutionService: IInstitutionService = {
       data: {
         id,
         name: data.name || 'Updated Institution',
+        type: data.type || 'organization',
         taxId: data.taxId || '12-3456789',
         apiKey: data.apiKey || 'ak_xxx',
         allowedDomain: data.allowedDomain || 'updated.signflow.com',
@@ -170,7 +178,7 @@ export const mockInstitutionService: IInstitutionService = {
         logoUrl: data.logoUrl || '',
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
+      } as Institution,
     };
   },
 
