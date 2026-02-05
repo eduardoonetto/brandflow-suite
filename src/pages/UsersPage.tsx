@@ -80,7 +80,7 @@ export default function UsersPage() {
       iu.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       iu.user.email.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesRole = roleFilter === 'all' || iu.role === roleFilter;
+    const matchesRole = roleFilter === 'all' || iu.roles.includes(roleFilter as InstitutionRole);
     
     return matchesSearch && matchesRole;
   });
@@ -95,7 +95,9 @@ export default function UsersPage() {
   };
 
   const roleStats = institutionUsers.reduce((acc, iu) => {
-    acc[iu.role] = (acc[iu.role] || 0) + 1;
+    iu.roles.forEach(role => {
+      acc[role] = (acc[role] || 0) + 1;
+    });
     return acc;
   }, {} as Record<string, number>);
 
@@ -143,8 +145,8 @@ export default function UsersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar usuarios..."
@@ -153,7 +155,7 @@ export default function UsersPage() {
             className="pl-10"
           />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
+        <Select value={roleFilter} onValueChange={setRoleFilter} >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Filtrar por rol" />
           </SelectTrigger>
@@ -205,15 +207,20 @@ export default function UsersPage() {
                     {iu.user.email}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      style={{ 
-                        backgroundColor: `hsl(${roleColors[iu.role]} / 0.15)`,
-                        color: `hsl(${roleColors[iu.role]})`
-                      }}
-                    >
-                      <Shield className="h-3 w-3 mr-1" />
-                      {iu.role}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {iu.roles.map(role => (
+                        <Badge
+                          key={role}
+                          style={{ 
+                            backgroundColor: `hsl(${roleColors[role]} / 0.15)`,
+                            color: `hsl(${roleColors[role]})`
+                          }}
+                        >
+                          <Shield className="h-3 w-3 mr-1" />
+                          {role}
+                        </Badge>
+                      ))}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(iu.joinedAt, 'd MMM yyyy', { locale: es })}

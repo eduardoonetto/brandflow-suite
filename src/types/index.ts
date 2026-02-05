@@ -3,6 +3,9 @@
 export type DocumentStatus = 'draft' | 'pending' | 'signed' | 'rejected';
 export type SignatureStatus = 'pending' | 'signed' | 'rejected';
 export type SignatureMethod = 'draw' | 'certificate' | 'typed';
+export type SignatureType = 'pin' | 'cedula';
+export type SignerType = 'signer' | 'approver'; // firmante o visador
+export type TemplateType = 'template' | 'upload'; // plantilla con variables o subida directa de PDF
 export type InstitutionType = 'personal' | 'organization';
 export type UserRole = 'superadmin' | 'admin' | 'user';
 export type InstitutionRole = 'Admin' | 'RRHH' | 'Trabajador' | 'Finanzas' | 'Legal' | 'Gerencia';
@@ -40,7 +43,7 @@ export interface InstitutionUser {
   id: string;
   userId: string;
   institutionId: string;
-  role: InstitutionRole;
+  roles: InstitutionRole[]; // Multiple roles per user
   user: User;
   joinedAt: Date;
 }
@@ -64,7 +67,9 @@ export interface DocumentTemplate {
   id: string;
   title: string;
   description: string;
+  templateType: TemplateType;
   content: string;
+  pdfUrl?: string; // For upload type templates
   category: string;
   tags: Tag[];
   institutionId: string;
@@ -80,9 +85,13 @@ export interface DocumentSigner {
   id: string;
   documentId: string;
   userId?: string;
+  roleId?: string; // For role-based signing
   email: string;
   name: string;
+  rut?: string;
   role?: string;
+  signerType: SignerType; // firmante o visador
+  signatureType: SignatureType; // pin o cedula
   order: number;
   status: SignatureStatus;
   signedAt?: Date;

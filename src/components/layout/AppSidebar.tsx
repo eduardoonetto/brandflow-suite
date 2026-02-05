@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   FileText, 
@@ -28,6 +28,7 @@ import {
   TooltipTrigger 
 } from '@/components/ui/tooltip';
 import { InstitutionSelector } from './InstitutionSelector';
+import { CreateDocumentModal } from '@/components/documents/CreateDocumentModal';
 
 interface AppSidebarProps {
   collapsed: boolean;
@@ -39,6 +40,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const { theme } = useTheme();
   const { isPersonalInstitution, currentInstitution } = useInstitution();
   const navigate = useNavigate();
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const mainNavItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -98,6 +100,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   };
 
   return (
+    <>
     <aside
       className={cn(
         'fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border',
@@ -135,18 +138,20 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       )}
 
       {/* New Document Button */}
-      <div className={cn('p-3', collapsed && 'px-2')}>
-        <Button 
-          onClick={() => navigate('/documents/new')}
-          className={cn(
-            'w-full bg-gradient-primary hover:opacity-90 transition-opacity',
-            collapsed && 'px-0'
-          )}
-        >
-          <Plus className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">Nuevo Documento</span>}
-        </Button>
-      </div>
+      {!isPersonalInstitution && (
+        <div className={cn('p-3', collapsed && 'px-2')}>
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            className={cn(
+              'w-full bg-gradient-primary hover:opacity-90 transition-opacity',
+              collapsed && 'px-0'
+            )}
+          >
+            <Plus className="h-4 w-4" />
+            {!collapsed && <span className="ml-2">Nuevo Documento</span>}
+          </Button>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-2">
@@ -239,5 +244,12 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         </div>
       </div>
     </aside>
+
+      <CreateDocumentModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        mode="document"
+      />
+    </>
   );
 }

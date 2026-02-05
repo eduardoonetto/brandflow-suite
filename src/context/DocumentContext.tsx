@@ -50,6 +50,7 @@ const mockTemplates: DocumentTemplate[] = [
     id: 'tmpl-1',
     title: 'Contrato de Trabajo',
     description: 'Plantilla estándar para contratos de trabajo indefinido',
+    templateType: 'template',
     content: 'Por medio del presente contrato, {{empresa_nombre}} con RUT {{empresa_rut}}, representada por {{representante_nombre}}, contrata a {{empleado_nombre}} con fecha de inicio {{fecha_inicio}} para el cargo de {{cargo}}...',
     category: 'Contratos',
     tags: [mockTags[0], mockTags[1]],
@@ -71,6 +72,7 @@ const mockTemplates: DocumentTemplate[] = [
     id: 'tmpl-2',
     title: 'Acuerdo de Confidencialidad (NDA)',
     description: 'Acuerdo de confidencialidad bilateral para proyectos empresariales',
+    templateType: 'template',
     content: 'Este Acuerdo de Confidencialidad se celebra entre {{parte_a}} y {{parte_b}} con fecha {{fecha_acuerdo}}...',
     category: 'Legal',
     tags: [mockTags[2], mockTags[4]],
@@ -89,6 +91,7 @@ const mockTemplates: DocumentTemplate[] = [
     id: 'tmpl-3',
     title: 'Orden de Compra',
     description: 'Formato estándar para órdenes de compra a proveedores',
+    templateType: 'template',
     content: 'Orden de compra para {{proveedor_nombre}} por un monto de ${{monto_total}} correspondiente a {{descripcion_items}}...',
     category: 'Finanzas',
     tags: [mockTags[3], mockTags[5]],
@@ -121,8 +124,8 @@ const mockDocuments: Document[] = [
       { key: 'empresa_nombre', type: 'text', label: 'Nombre de Empresa', required: true, value: 'Acme Corporation' },
     ],
     signers: [
-      { id: 'signer-1', documentId: 'doc-1', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', order: 1, status: 'pending' },
-      { id: 'signer-2', documentId: 'doc-1', userId: 'user-2', email: 'maria@acme.com', name: 'María García', order: 2, status: 'pending' },
+      { id: 'signer-1', documentId: 'doc-1', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', rut: '12.345.678-9', order: 1, status: 'pending', signerType: 'signer', signatureType: 'pin' },
+      { id: 'signer-2', documentId: 'doc-1', userId: 'user-2', email: 'maria@acme.com', name: 'María García', rut: '11.222.333-4', order: 2, status: 'pending', signerType: 'signer', signatureType: 'pin' },
     ],
     signatures: [],
     fileSize: '2.4 MB',
@@ -145,7 +148,7 @@ const mockDocuments: Document[] = [
       { key: 'parte_b', type: 'text', label: 'Parte B', required: true, value: 'Tech Solutions' },
     ],
     signers: [
-      { id: 'signer-3', documentId: 'doc-2', userId: 'user-3', email: 'carlos@acme.com', name: 'Carlos Rodríguez', order: 1, status: 'pending' },
+      { id: 'signer-3', documentId: 'doc-2', userId: 'user-3', email: 'carlos@acme.com', name: 'Carlos Rodríguez', rut: '14.555.666-7', order: 1, status: 'pending', signerType: 'signer', signatureType: 'cedula' },
     ],
     signatures: [],
     fileSize: '1.1 MB',
@@ -168,8 +171,8 @@ const mockDocuments: Document[] = [
       { key: 'monto_total', type: 'number', label: 'Monto Total', required: true, value: '15000' },
     ],
     signers: [
-      { id: 'signer-4', documentId: 'doc-3', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', order: 1, status: 'pending' },
-      { id: 'signer-5', documentId: 'doc-3', userId: 'user-5', email: 'pedro@acme.com', name: 'Pedro López', order: 2, status: 'pending' },
+      { id: 'signer-4', documentId: 'doc-3', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', rut: '12.345.678-9', order: 1, status: 'pending', signerType: 'approver', signatureType: 'pin' },
+      { id: 'signer-5', documentId: 'doc-3', userId: 'user-5', email: 'pedro@acme.com', name: 'Pedro López', rut: '17.888.999-0', order: 2, status: 'pending', signerType: 'signer', signatureType: 'pin' },
     ],
     signatures: [],
     fileSize: '1.5 MB',
@@ -188,8 +191,8 @@ const mockDocuments: Document[] = [
     createdBy: 'user-2',
     variables: [],
     signers: [
-      { id: 'signer-6', documentId: 'doc-4', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', order: 1, status: 'signed', signedAt: new Date() },
-      { id: 'signer-7', documentId: 'doc-4', userId: 'user-2', email: 'maria@acme.com', name: 'María García', order: 2, status: 'pending' },
+      { id: 'signer-6', documentId: 'doc-4', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', rut: '12.345.678-9', order: 1, status: 'signed', signedAt: new Date(), signerType: 'signer', signatureType: 'pin' },
+      { id: 'signer-7', documentId: 'doc-4', userId: 'user-2', email: 'maria@acme.com', name: 'María García', rut: '11.222.333-4', order: 2, status: 'pending', signerType: 'signer', signatureType: 'cedula' },
     ],
     signatures: [
       {
@@ -217,8 +220,8 @@ const mockDocuments: Document[] = [
     createdBy: 'user-3',
     variables: [],
     signers: [
-      { id: 'signer-8', documentId: 'doc-5', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', order: 1, status: 'signed', signedAt: new Date() },
-      { id: 'signer-9', documentId: 'doc-5', userId: 'user-3', email: 'carlos@acme.com', name: 'Carlos Rodríguez', order: 2, status: 'pending' },
+      { id: 'signer-8', documentId: 'doc-5', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', rut: '12.345.678-9', order: 1, status: 'signed', signedAt: new Date(), signerType: 'signer', signatureType: 'pin' },
+      { id: 'signer-9', documentId: 'doc-5', userId: 'user-3', email: 'carlos@acme.com', name: 'Carlos Rodríguez', rut: '14.555.666-7', order: 2, status: 'pending', signerType: 'signer', signatureType: 'pin' },
     ],
     signatures: [
       {
@@ -246,8 +249,8 @@ const mockDocuments: Document[] = [
     createdBy: 'user-1',
     variables: [],
     signers: [
-      { id: 'signer-10', documentId: 'doc-6', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', order: 1, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 3) },
-      { id: 'signer-11', documentId: 'doc-6', userId: 'user-5', email: 'pedro@acme.com', name: 'Pedro López', order: 2, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 2) },
+      { id: 'signer-10', documentId: 'doc-6', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', rut: '12.345.678-9', order: 1, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 3), signerType: 'signer', signatureType: 'pin' },
+      { id: 'signer-11', documentId: 'doc-6', userId: 'user-5', email: 'pedro@acme.com', name: 'Pedro López', rut: '17.888.999-0', order: 2, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 2), signerType: 'signer', signatureType: 'cedula' },
     ],
     signatures: [
       {
@@ -286,8 +289,8 @@ const mockDocuments: Document[] = [
     createdBy: 'user-1',
     variables: [],
     signers: [
-      { id: 'signer-12', documentId: 'doc-7', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', order: 1, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 5) },
-      { id: 'signer-13', documentId: 'doc-7', userId: 'user-3', email: 'carlos@acme.com', name: 'Carlos Rodríguez', order: 2, status: 'rejected', rejectedAt: new Date(Date.now() - 86400000 * 4), rejectionReason: 'Términos no aceptables' },
+      { id: 'signer-12', documentId: 'doc-7', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', rut: '12.345.678-9', order: 1, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 5), signerType: 'signer', signatureType: 'pin' },
+      { id: 'signer-13', documentId: 'doc-7', userId: 'user-3', email: 'carlos@acme.com', name: 'Carlos Rodríguez', rut: '14.555.666-7', order: 2, status: 'rejected', rejectedAt: new Date(Date.now() - 86400000 * 4), rejectionReason: 'Términos no aceptables', signerType: 'signer', signatureType: 'cedula' },
     ],
     signatures: [
       {
@@ -315,8 +318,8 @@ const mockDocuments: Document[] = [
     createdBy: 'user-2',
     variables: [],
     signers: [
-      { id: 'signer-14', documentId: 'doc-8', userId: 'user-2', email: 'maria@acme.com', name: 'María García', order: 1, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 6) },
-      { id: 'signer-15', documentId: 'doc-8', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', order: 2, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 5) },
+      { id: 'signer-14', documentId: 'doc-8', userId: 'user-2', email: 'maria@acme.com', name: 'María García', rut: '11.222.333-4', order: 1, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 6), signerType: 'approver', signatureType: 'pin' },
+      { id: 'signer-15', documentId: 'doc-8', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', rut: '12.345.678-9', order: 2, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 5), signerType: 'signer', signatureType: 'pin' },
     ],
     signatures: [
       {
@@ -355,8 +358,8 @@ const mockDocuments: Document[] = [
     createdBy: 'user-5',
     variables: [],
     signers: [
-      { id: 'signer-16', documentId: 'doc-9', userId: 'user-5', email: 'pedro@acme.com', name: 'Pedro López', order: 1, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 4) },
-      { id: 'signer-17', documentId: 'doc-9', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', order: 2, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 3) },
+      { id: 'signer-16', documentId: 'doc-9', userId: 'user-5', email: 'pedro@acme.com', name: 'Pedro López', rut: '17.888.999-0', order: 1, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 4), signerType: 'signer', signatureType: 'cedula' },
+      { id: 'signer-17', documentId: 'doc-9', userId: 'user-1', email: 'admin@acme.com', name: 'John Smith', rut: '12.345.678-9', order: 2, status: 'signed', signedAt: new Date(Date.now() - 86400000 * 3), signerType: 'approver', signatureType: 'pin' },
     ],
     signatures: [
       {
