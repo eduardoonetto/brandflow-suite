@@ -28,12 +28,14 @@ interface DocumentSignatureCardProps {
   document: Document;
   showSignButton?: boolean;
   onSign?: () => void;
+  onView?: () => void;
 }
 
 export function DocumentSignatureCard({ 
   document, 
   showSignButton = true,
-  onSign 
+  onSign,
+  onView
 }: DocumentSignatureCardProps) {
   const navigate = useNavigate();
 
@@ -186,19 +188,19 @@ export function DocumentSignatureCard({
         )}
 
         {/* Actions */}
-        <div className="flex items-center gap-2 pt-2">
+        <div className="flex flex-wrap items-center gap-2 pt-2">
           <Button 
             variant="outline" 
             size="sm" 
             className="flex-1"
-            onClick={() => navigate(`/documents/${document.id}`)}
+            onClick={onView || (() => navigate(`/documents/${document.id}`))}
           >
-            <Eye className="h-4 w-4 mr-2" />
-            Ver
+            <Eye className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Ver</span>
           </Button>
-          <Button variant="outline" size="sm" className="flex-1">
-            <Download className="h-4 w-4 mr-2" />
-            Descargar
+          <Button variant="outline" size="sm" className="flex-1 hidden sm:flex">
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Descargar</span>
           </Button>
           {showSignButton && document.status === 'pending' && (
             <Button 
@@ -206,8 +208,8 @@ export function DocumentSignatureCard({
               className="flex-1 bg-gradient-primary hover:opacity-90"
               onClick={onSign}
             >
-              <PenLine className="h-4 w-4 mr-2" />
-              Firmar
+              <PenLine className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Firmar</span>
             </Button>
           )}
         </div>

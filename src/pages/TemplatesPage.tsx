@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDocuments } from '@/context/DocumentContext';
+import { useInstitution } from '@/context/InstitutionContext';
+import { CreateDocumentModal } from '@/components/documents/CreateDocumentModal';
 import { DocumentTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +37,25 @@ import { es } from 'date-fns/locale';
 export default function TemplatesPage() {
   const navigate = useNavigate();
   const { templates, deleteTemplate } = useDocuments();
+  const { isPersonalInstitution } = useInstitution();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Personal institutions can't create templates
+  if (isPersonalInstitution) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+        <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+          <FileText className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h3 className="font-semibold mb-1">Plantillas no disponibles</h3>
+        <p className="text-muted-foreground text-sm max-w-md px-4">
+          Solo las instituciones organizacionales pueden crear y gestionar plantillas.
+          Cambia a una institución organizacional para acceder a esta funcionalidad.
+        </p>
+      </div>
+    );
+  }
 
   const filteredTemplates = templates.filter(tmpl => {
     if (!searchQuery) return true;
@@ -78,7 +98,7 @@ export default function TemplatesPage() {
         </div>
         
         <Button 
-          onClick={() => navigate('/templates/new')}
+          onClick={() => setShowCreateModal(true)}
           className="bg-gradient-primary hover:opacity-90"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -87,7 +107,7 @@ export default function TemplatesPage() {
       </div>
 
       {/* Search */}
-      <div className="relative max-w-md">
+      <div className="relative w-full max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Buscar plantillas..."
@@ -107,7 +127,7 @@ export default function TemplatesPage() {
           <p className="text-muted-foreground text-sm mb-4">
             Crea tu primera plantilla para empezar
           </p>
-          <Button onClick={() => navigate('/templates/new')}>
+          <Button onClick={() => setShowCreateModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Crear Plantilla
           </Button>
@@ -211,6 +231,12 @@ export default function TemplatesPage() {
           ))}
         </div>
       )}
+
+      <CreateDocumentModal 
+        open={showCreateModal} 
+        onOpenChange={setShowCreateModal}
+        mode="template"
+      />
     </div>
   );
 }

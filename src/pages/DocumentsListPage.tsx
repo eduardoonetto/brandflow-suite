@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDocuments } from '@/context/DocumentContext';
+import { useInstitution } from '@/context/InstitutionContext';
 import { DocumentSignatureCard } from '@/components/documents/DocumentSignatureCard';
+import { PDFViewerModal } from '@/components/documents/PDFViewerModal';
 import { SignatureModal } from '@/components/signature/SignatureModal';
+import { CreateDocumentModal } from '@/components/documents/CreateDocumentModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,6 +34,7 @@ interface DocumentsListPageProps {
 
 export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsListPageProps) {
   const navigate = useNavigate();
+  const { isPersonalInstitution } = useInstitution();
   const { 
     pendingDocuments, 
     inProgressDocuments, 
@@ -43,6 +47,8 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
   const [searchQuery, setSearchQuery] = useState('');
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showPDFViewer, setShowPDFViewer] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const getDocumentsForTab = (): Document[] => {
     let docs: Document[] = [];
@@ -77,6 +83,11 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
   const handleSign = (doc: Document) => {
     setSelectedDocument(doc);
     setShowSignatureModal(true);
+  };
+  
+  const handleView = (doc: Document) => {
+    setSelectedDocument(doc);
+    setShowPDFViewer(true);
   };
 
   const handleSignatureComplete = () => {
@@ -129,13 +140,15 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
           </p>
         </div>
         
-        <Button 
-          onClick={() => navigate('/documents/new')}
-          className="bg-gradient-primary hover:opacity-90"
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Subir Documento
-        </Button>
+        {!isPersonalInstitution && (
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            className="bg-gradient-primary hover:opacity-90"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Nuevo Documento
+          </Button>
+        )}
       </div>
 
       {/* Search and filters */}
@@ -156,7 +169,7 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
       </div>
 
       {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <Card className="bg-warning/5 border-warning/20">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
@@ -188,15 +201,16 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DocumentTab)}>
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 flex-wrap h-auto gap-1">
           {tabConfig.map(tab => (
             <TabsTrigger 
               key={tab.value} 
               value={tab.value}
-              className="gap-2"
+              className="gap-1 sm:gap-2 text-xs sm:text-sm"
             >
-              <tab.icon className={cn('h-4 w-4', tab.color)} />
-              {tab.label}
+              <tab.icon className={cn('h-3 w-3 sm:h-4 sm:w-4', tab.color)} />
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
               <span className={cn(
                 'ml-1 px-1.5 py-0.5 rounded-full text-xs font-medium',
                 activeTab === tab.value 
@@ -229,6 +243,7 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
                     document={doc}
                     showSignButton={activeTab === 'pending'}
                     onSign={() => handleSign(doc)}
+                    onView={() => handleView(doc)}
                   />
                 ))}
               </div>
@@ -243,6 +258,22 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
         onOpenChange={setShowSignatureModal}
         onComplete={handleSignatureComplete}
         documentTitle={selectedDocument?.title || ''}
+      />
+
+      <PDFViewerModal
+        open={showPDFViewer}
+        onOpenChange={setShowPDFViewer}
+        document={selectedDocument}
+        onSign={() => {
+          setShowPDFViewer(false);
+          setShowSignatureModal(true);
+        }}
+      />
+
+      <CreateDocumentModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        mode="document"
       />
     </div>
   );

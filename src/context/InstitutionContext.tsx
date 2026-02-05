@@ -111,16 +111,64 @@ const mockUsers: User[] = [
 ];
 
 // Mock institution users
-const mockInstitutionUsers: InstitutionUser[] = mockUsers.flatMap(user =>
-  user.institutions.map((inst, idx) => ({
-    id: `iu-${user.id}-${inst.institutionId}`,
-    userId: user.id,
-    institutionId: inst.institutionId,
-    role: inst.role,
-    user,
-    joinedAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
-  }))
-);
+const mockInstitutionUsers: InstitutionUser[] = [
+  {
+    id: 'iu-user-1-inst-acme',
+    userId: 'user-1',
+    institutionId: 'inst-acme',
+    roles: ['Admin', 'RRHH'],
+    user: mockUsers[0],
+    joinedAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'iu-user-1-inst-tech',
+    userId: 'user-1',
+    institutionId: 'inst-tech',
+    roles: ['RRHH'],
+    user: mockUsers[0],
+    joinedAt: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'iu-user-2-inst-acme',
+    userId: 'user-2',
+    institutionId: 'inst-acme',
+    roles: ['RRHH', 'Legal'],
+    user: mockUsers[1],
+    joinedAt: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'iu-user-3-inst-acme',
+    userId: 'user-3',
+    institutionId: 'inst-acme',
+    roles: ['Trabajador'],
+    user: mockUsers[2],
+    joinedAt: new Date(Date.now() - 150 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'iu-user-3-inst-tech',
+    userId: 'user-3',
+    institutionId: 'inst-tech',
+    roles: ['Finanzas', 'Gerencia'],
+    user: mockUsers[2],
+    joinedAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'iu-user-4-inst-tech',
+    userId: 'user-4',
+    institutionId: 'inst-tech',
+    roles: ['Admin'],
+    user: mockUsers[3],
+    joinedAt: new Date(Date.now() - 250 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'iu-user-5-inst-acme',
+    userId: 'user-5',
+    institutionId: 'inst-acme',
+    roles: ['Finanzas', 'Trabajador'],
+    user: mockUsers[4],
+    joinedAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000),
+  },
+];
 
 export function InstitutionProvider({ children }: { children: React.ReactNode }) {
   const [currentInstitution, setCurrentInstitution] = useState<Institution>(mockPersonalInstitution);
