@@ -158,6 +158,9 @@ export interface AuditEvent {
     location?: string;
     recipientEmail?: string;
     signatureHash?: string;
+    signerName?: string;
+    signatureMethod?: string;
+    rejectionReason?: string;
   };
 }
 

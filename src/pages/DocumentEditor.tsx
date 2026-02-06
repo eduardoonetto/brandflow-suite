@@ -6,6 +6,8 @@ import { VariablePanel } from '@/components/editor/VariablePanel';
 import { DocumentPreview } from '@/components/editor/DocumentPreview';
 import { SignatureModal } from '@/components/signature/SignatureModal';
 import { AuditTimeline } from '@/components/audit/AuditTimeline';
+import { RichTextEditor } from '@/components/editor/RichTextEditor';
+import { TagCreator } from '@/components/documents/TagCreator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,7 +34,6 @@ import {
   Edit3,
   PenLine,
   History,
-  Tag,
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -85,7 +86,7 @@ const mockAuditEvents: AuditEvent[] = [
 export default function DocumentEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { documents, tags, updateDocument, addDocument } = useDocuments();
+  const { documents, tags, updateDocument, addDocument, addTag } = useDocuments();
   
   const isNew = id === 'new';
   const existingDoc = documents.find(d => d.id === id);
@@ -98,6 +99,7 @@ export default function DocumentEditor() {
   );
   const [activeTab, setActiveTab] = useState('edit');
   const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [useRichEditor, setUseRichEditor] = useState(true);
 
   const { 
     variables, 
@@ -109,7 +111,9 @@ export default function DocumentEditor() {
 
   // Parse content for variables when content changes
   useEffect(() => {
-    parseContent(content);
+    // Strip HTML tags for variable parsing
+    const plainContent = content.replace(/<[^>]+>/g, '');
+    parseContent(plainContent);
   }, [content, parseContent]);
 
   // Load existing document values
@@ -165,27 +169,35 @@ export default function DocumentEditor() {
     );
   };
 
+  const handleTagCreate = (name: string, color: string) => {
+    const newTag = addTag(name, color);
+    setSelectedTags(prev => [...prev, newTag.id]);
+  };
+
+  // Show history tab only for existing documents with signers
+  const showHistoryTab = !isNew && existingDoc?.signers?.length > 0;
+
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b mb-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b mb-4 gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <Button 
             variant="ghost" 
             size="icon"
-            onClick={() => navigate('/documents')}
+            onClick={() => navigate(-1)}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           
-          <div>
+          <div className="min-w-0 flex-1">
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Título del documento"
               className="text-lg font-semibold border-none shadow-none px-0 h-auto focus-visible:ring-0"
             />
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className={cn(
                 'status-badge',
                 status === 'draft' ? 'status-draft' :
@@ -222,7 +234,7 @@ export default function DocumentEditor() {
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Select value={status} onValueChange={(v) => setStatus(v as DocumentStatus)}>
             <SelectTrigger className="w-32">
               <SelectValue />
@@ -274,62 +286,63 @@ export default function DocumentEditor() {
         {/* Editor / Preview area */}
         <div className="flex-1 flex flex-col min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="mb-4 w-fit">
-              <TabsTrigger value="edit" className="gap-2">
-                <Edit3 className="h-4 w-4" />
-                Editar
-              </TabsTrigger>
-              <TabsTrigger value="preview" className="gap-2">
-                <Eye className="h-4 w-4" />
-                Vista Previa
-              </TabsTrigger>
-              {!isNew && (
-                <TabsTrigger value="history" className="gap-2">
-                  <History className="h-4 w-4" />
-                  Historial
+            <div className="flex items-center justify-between mb-4">
+              <TabsList className="w-fit">
+                <TabsTrigger value="edit" className="gap-2">
+                  <Edit3 className="h-4 w-4" />
+                  Editar
                 </TabsTrigger>
-              )}
-            </TabsList>
+                <TabsTrigger value="preview" className="gap-2">
+                  <Eye className="h-4 w-4" />
+                  Vista Previa
+                </TabsTrigger>
+                {showHistoryTab && (
+                  <TabsTrigger value="history" className="gap-2">
+                    <History className="h-4 w-4" />
+                    Historial
+                  </TabsTrigger>
+                )}
+              </TabsList>
+
+              <TagCreator
+                existingTags={tags}
+                selectedTags={selectedTags}
+                onTagSelect={toggleTag}
+                onTagCreate={handleTagCreate}
+              />
+            </div>
             
             <TabsContent value="edit" className="flex-1 m-0">
               <div className="h-full flex flex-col gap-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
-                    <Tag className="h-3 w-3" />
-                    Etiquetas
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map(tag => (
-                      <button
-                        key={tag.id}
-                        onClick={() => toggleTag(tag.id)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-full text-xs font-medium transition-all',
-                          selectedTags.includes(tag.id)
-                            ? 'ring-2 ring-offset-2 ring-primary/20'
-                            : 'opacity-50 hover:opacity-100'
-                        )}
-                        style={{ 
-                          backgroundColor: `hsl(${tag.color} / 0.15)`,
-                          color: `hsl(${tag.color})`
-                        }}
-                      >
-                        {tag.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
                 <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground mb-2 block">
-                    Contenido del documento
-                  </Label>
-                  <Textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Escriba el contenido del documento aquí. Use {{variable}} para crear campos editables."
-                    className="h-full min-h-[400px] resize-none font-mono text-sm"
-                  />
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Contenido del documento
+                    </Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setUseRichEditor(!useRichEditor)}
+                      className="h-7 text-xs"
+                    >
+                      {useRichEditor ? 'Modo código' : 'Modo visual'}
+                    </Button>
+                  </div>
+                  
+                  {useRichEditor ? (
+                    <RichTextEditor
+                      content={content}
+                      onChange={setContent}
+                      placeholder="Escriba el contenido del documento aquí. Use {{variable}} para crear campos editables."
+                    />
+                  ) : (
+                    <Textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Escriba el contenido del documento aquí. Use {{variable}} para crear campos editables."
+                      className="h-full min-h-[400px] resize-none font-mono text-sm"
+                    />
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -343,9 +356,11 @@ export default function DocumentEditor() {
               />
             </TabsContent>
             
-            <TabsContent value="history" className="flex-1 m-0 overflow-y-auto">
-              <AuditTimeline events={mockAuditEvents} />
-            </TabsContent>
+            {showHistoryTab && (
+              <TabsContent value="history" className="flex-1 m-0 overflow-y-auto">
+                <AuditTimeline events={mockAuditEvents} />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
 

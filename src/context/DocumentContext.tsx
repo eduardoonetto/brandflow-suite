@@ -26,6 +26,8 @@ interface DocumentContextValue {
   updateDocument: (id: string, updates: Partial<Document>) => void;
   deleteDocument: (id: string) => void;
   createDocumentFromTemplate: (templateId: string, variables: Record<string, string>, signers: Omit<DocumentSigner, 'id' | 'documentId'>[]) => Document;
+  // Tag operations
+  addTag: (name: string, color: string) => Tag;
 }
 
 const DocumentContext = createContext<DocumentContextValue | undefined>(undefined);
@@ -401,6 +403,7 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
   const [templates, setTemplates] = useState<DocumentTemplate[]>(mockTemplates);
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [filters, setFiltersState] = useState<FilterState>(defaultFilters);
+  const [tags, setTags] = useState<Tag[]>(mockTags);
 
   const setFilters = useCallback((newFilters: Partial<FilterState>) => {
     setFiltersState(prev => ({ ...prev, ...newFilters }));
@@ -568,6 +571,22 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     return newDoc;
   }, [templates]);
 
+  // Tag operations
+  const addTag = useCallback((name: string, color: string): Tag => {
+    // Check if tag with same name exists
+    const existing = tags.find(t => t.name.toLowerCase() === name.toLowerCase());
+    if (existing) return existing;
+
+    const newTag: Tag = {
+      id: `tag-${Date.now()}`,
+      name,
+      color,
+      institutionId: 'inst-acme',
+    };
+    setTags(prev => [...prev, newTag]);
+    return newTag;
+  }, [tags]);
+
   return (
     <DocumentContext.Provider
       value={{
@@ -575,7 +594,7 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
         templates,
         selectedDocuments,
         filters,
-        tags: mockTags,
+        tags,
         setFilters,
         toggleDocumentSelection,
         selectAllDocuments,
@@ -592,6 +611,7 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
         updateDocument,
         deleteDocument,
         createDocumentFromTemplate,
+        addTag,
       }}
     >
       {children}

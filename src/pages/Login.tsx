@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { FileText, Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
+import loginHero from '@/assets/login-hero.jpg';
+import dec5Logo from '@/assets/dec5-logo.png';
 
 export default function Login() {
   const [step, setStep] = useState<'email' | 'password'>('email');
@@ -99,31 +101,60 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-hero p-12 flex-col justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
-            <FileText className="h-5 w-5 text-white" />
+      {/* Left side - Branding with AI image */}
+      <div 
+        className="hidden lg:flex lg:w-1/2 relative flex-col justify-between overflow-hidden"
+      >
+        {/* Background image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${loginHero})` }}
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-primary/70" />
+        
+        {/* Content */}
+        <div className="relative z-10 p-12 flex flex-col h-full justify-between">
+          <div className="flex items-center gap-3">
+            <img 
+              src={dec5Logo} 
+              alt="DEC5 Logo" 
+              className="h-12 w-auto object-contain bg-white/90 rounded-lg px-3 py-1"
+            />
           </div>
-          <span className="text-xl font-semibold text-white">SignFlow</span>
-        </div>
-        
-        <div className="max-w-md">
-          <h1 className="text-4xl font-bold text-white mb-4 leading-tight">
-            Gestiona y firma documentos de manera segura
-          </h1>
-          <p className="text-white/70 text-lg">
-            Plataforma empresarial para la gestión de documentos digitales con 
-            firmas electrónicas legalmente vinculantes.
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-4 text-white/50 text-sm">
-          <span>© 2024 SignFlow</span>
-          <span>•</span>
-          <a href="#" className="hover:text-white/70">Términos</a>
-          <span>•</span>
-          <a href="#" className="hover:text-white/70">Privacidad</a>
+          
+          <div className="max-w-md">
+            <h1 className="text-4xl font-bold text-white mb-4 leading-tight">
+              Gestiona y firma documentos de manera segura
+            </h1>
+            <p className="text-white/80 text-lg">
+              Plataforma empresarial para la gestión de documentos digitales con 
+              firmas electrónicas legalmente vinculantes.
+            </p>
+            
+            <div className="mt-8 grid grid-cols-3 gap-4">
+              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+                <p className="text-2xl font-bold text-white">100%</p>
+                <p className="text-sm text-white/70">Digital</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+                <p className="text-2xl font-bold text-white">24/7</p>
+                <p className="text-sm text-white/70">Disponible</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+                <p className="text-2xl font-bold text-white">SSL</p>
+                <p className="text-sm text-white/70">Seguro</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4 text-white/50 text-sm">
+            <span>© 2024 DEC5</span>
+            <span>•</span>
+            <a href="#" className="hover:text-white/70">Términos</a>
+            <span>•</span>
+            <a href="#" className="hover:text-white/70">Privacidad</a>
+          </div>
         </div>
       </div>
 
@@ -131,11 +162,12 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-semibold">SignFlow</span>
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+            <img 
+              src={dec5Logo} 
+              alt="DEC5 Logo" 
+              className="h-12 w-auto object-contain"
+            />
           </div>
 
           <div className="mb-8">

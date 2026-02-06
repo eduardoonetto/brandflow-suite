@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { 
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import {
   FileText, 
   LayoutDashboard, 
   Users, 
@@ -40,6 +40,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const { theme } = useTheme();
   const { isPersonalInstitution, currentInstitution } = useInstitution();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const mainNavItems = [
@@ -67,22 +68,31 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
     : adminNavItems;
 
   const NavItem = ({ icon: Icon, label, path }: { icon: React.ElementType; label: string; path: string }) => {
+    // Check if this path is active - handle document routes specially
+    const isActive = path.startsWith('/documents/') 
+      ? location.pathname === path
+      : location.pathname.startsWith(path);
+
+    const handleClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      navigate(path);
+    };
+
     const content = (
-      <NavLink
-        to={path}
-        className={({ isActive }) =>
-          cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
-            'text-sidebar-foreground/70 hover:text-sidebar-foreground',
-            'hover:bg-sidebar-accent',
-            isActive && 'bg-sidebar-accent text-sidebar-foreground font-medium',
-            collapsed && 'justify-center px-2'
-          )
-        }
+      <a
+        href={path}
+        onClick={handleClick}
+        className={cn(
+          'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
+          'text-sidebar-foreground/70 hover:text-sidebar-foreground',
+          'hover:bg-sidebar-accent',
+          isActive && 'bg-sidebar-accent text-sidebar-foreground font-medium',
+          collapsed && 'justify-center px-2'
+        )}
       >
         <Icon className="h-5 w-5 shrink-0" />
         {!collapsed && <span className="truncate">{label}</span>}
-      </NavLink>
+      </a>
     );
 
     if (collapsed) {

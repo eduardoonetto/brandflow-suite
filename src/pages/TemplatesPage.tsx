@@ -236,6 +236,7 @@ export default function TemplatesPage() {
         open={showCreateModal} 
         onOpenChange={setShowCreateModal}
         mode="template"
+        showSignerConfig={true}
       />
     </div>
   );
