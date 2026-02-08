@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FileText, 
   LayoutDashboard, 
@@ -15,7 +15,10 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  FileClock
+  FileClock,
+  Trash2,
+  Shield,
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -27,8 +30,14 @@ import {
   TooltipContent,
   TooltipTrigger 
 } from '@/components/ui/tooltip';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { InstitutionSelector } from './InstitutionSelector';
 import { CreateDocumentModal } from '@/components/documents/CreateDocumentModal';
+import dec5Logo from '@/assets/dec5-logo.png';
 
 interface AppSidebarProps {
   collapsed: boolean;
@@ -42,33 +51,44 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(true);
 
   const mainNavItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: FileStack, label: 'Plantillas', path: '/templates' },
   ];
+
+  // Only show templates for organizations
+  if (!isPersonalInstitution) {
+    mainNavItems.push({ icon: FileStack, label: 'Plantillas', path: '/templates' });
+  }
 
   const documentNavItems = [
-    { icon: Clock, label: 'Por Firmar', path: '/documents/pending', badge: 'pending' },
-    { icon: FileClock, label: 'En Proceso', path: '/documents/in-progress', badge: 'inProgress' },
-    { icon: CheckCircle, label: 'Firmados', path: '/documents/signed', badge: 'signed' },
-    { icon: XCircle, label: 'Rechazados', path: '/documents/rejected', badge: 'rejected' },
+    { icon: Clock, label: 'Por Firmar', path: '/documents/pending' },
+    { icon: FileClock, label: 'En Proceso', path: '/documents/in-progress' },
+    { icon: CheckCircle, label: 'Firmados', path: '/documents/signed' },
+    { icon: XCircle, label: 'Rechazados', path: '/documents/rejected' },
   ];
 
-  const adminNavItems = [
+  // Add trash only for organizations
+  if (!isPersonalInstitution) {
+    documentNavItems.push({ icon: Trash2, label: 'Papelera', path: '/documents/trashed' });
+  }
+
+  // Super admin menu (institutions)
+  const superAdminNavItems = user?.role === 'superadmin' ? [
     { icon: Building2, label: 'Instituciones', path: '/admin/institutions' },
-    { icon: Users, label: 'Usuarios', path: '/admin/users' },
-    { icon: BarChart3, label: 'Reportes', path: '/reports' },
-    { icon: Settings, label: 'Configuración', path: '/settings' },
-  ];
+  ] : [];
 
-  // For personal institutions, hide Users menu
-  const filteredAdminItems = isPersonalInstitution 
-    ? adminNavItems.filter(item => item.path !== '/admin/users')
-    : adminNavItems;
+  // Admin items (different based on institution type)
+  const adminNavItems = isPersonalInstitution 
+    ? [{ icon: Settings, label: 'Configuración', path: '/settings' }]
+    : [
+        { icon: Users, label: 'Usuarios', path: '/admin/users' },
+        { icon: BarChart3, label: 'Reportes', path: '/reports' },
+        { icon: Settings, label: 'Configuración', path: '/settings' },
+      ];
 
   const NavItem = ({ icon: Icon, label, path }: { icon: React.ElementType; label: string; path: string }) => {
-    // Check if this path is active - handle document routes specially
     const isActive = path.startsWith('/documents/') 
       ? location.pathname === path
       : location.pathname.startsWith(path);
@@ -125,18 +145,28 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       )}>
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <FileText className="h-4 w-4 text-primary-foreground" />
-            </div>
+            <img 
+              src={currentInstitution?.logoUrl || dec5Logo} 
+              alt="Logo" 
+              className="h-8 w-auto object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = dec5Logo;
+              }}
+            />
             <span className="font-semibold text-sidebar-foreground">
-              SignFlow
+              tuFirmaOK
             </span>
           </div>
         )}
         {collapsed && (
-          <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-            <FileText className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <img 
+            src={currentInstitution?.logoUrl || dec5Logo} 
+            alt="Logo" 
+            className="h-8 w-8 object-contain"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = dec5Logo;
+            }}
+          />
         )}
       </div>
 
@@ -186,7 +216,27 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           ))}
         </div>
 
-        {user?.role === 'admin' || user?.role === 'superadmin' ? (
+        {/* Super Admin section (for superadmins only) */}
+        {superAdminNavItems.length > 0 && (
+          <>
+            {!collapsed && (
+              <div className="mt-6 mb-2 px-3">
+                <span className="text-xs font-medium text-sidebar-muted uppercase tracking-wider">
+                  Super Admin
+                </span>
+              </div>
+            )}
+            {collapsed && <div className="my-4 border-t border-sidebar-border" />}
+            <div className="space-y-1">
+              {superAdminNavItems.map(item => (
+                <NavItem key={item.path} {...item} />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Admin section */}
+        {(user?.role === 'admin' || user?.role === 'superadmin') && (
           <>
             {!collapsed && (
               <div className="mt-6 mb-2 px-3">
@@ -197,12 +247,12 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             )}
             {collapsed && <div className="my-4 border-t border-sidebar-border" />}
             <div className="space-y-1">
-              {filteredAdminItems.map(item => (
+              {adminNavItems.map(item => (
                 <NavItem key={item.path} {...item} />
               ))}
             </div>
           </>
-        ) : null}
+        )}
       </nav>
 
       {/* Footer */}

@@ -201,6 +201,7 @@ export const mockKPIService: IKPIService = {
           pending: 8,
           signed: 45,
           rejected: 3,
+          trashed: 2,
         },
         signingTimeByDepartment: {
           RRHH: 1.8,

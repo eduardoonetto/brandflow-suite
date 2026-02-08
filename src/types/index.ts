@@ -1,6 +1,6 @@
 // Core entity types for the document signing platform
 
-export type DocumentStatus = 'draft' | 'pending' | 'signed' | 'rejected';
+export type DocumentStatus = 'draft' | 'pending' | 'signed' | 'rejected' | 'trashed';
 export type SignatureStatus = 'pending' | 'signed' | 'rejected';
 export type SignatureMethod = 'draw' | 'certificate' | 'typed';
 export type SignatureType = 'pin' | 'cedula';
@@ -9,6 +9,7 @@ export type TemplateType = 'template' | 'upload'; // plantilla con variables o s
 export type InstitutionType = 'personal' | 'organization';
 export type UserRole = 'superadmin' | 'admin' | 'user';
 export type InstitutionRole = 'Admin' | 'RRHH' | 'Trabajador' | 'Finanzas' | 'Legal' | 'Gerencia';
+export type NotificationType = 'all' | 'pending' | 'rejected' | 'signed';
 
 export interface Institution {
   id: string;
@@ -98,6 +99,7 @@ export interface DocumentSigner {
   rejectedAt?: Date;
   rejectionReason?: string;
   signature?: Signature;
+  notificationType?: NotificationType; // tipo de notificación
 }
 
 // Document - created from template with filled variables
@@ -120,6 +122,8 @@ export interface Document {
   updatedAt: Date;
   finalizedAt?: Date;
   documentHash?: string;
+  trashedAt?: Date;
+  trashReason?: string;
 }
 
 export interface DocumentVariable {
@@ -148,7 +152,7 @@ export interface Signature {
 export interface AuditEvent {
   id: string;
   documentId: string;
-  type: 'created' | 'sent' | 'delivered' | 'opened' | 'signed' | 'rejected' | 'modified';
+  type: 'created' | 'sent' | 'delivered' | 'opened' | 'signed' | 'rejected' | 'modified' | 'trashed';
   timestamp: Date;
   actorId: string;
   actorEmail: string;
@@ -161,6 +165,7 @@ export interface AuditEvent {
     signerName?: string;
     signatureMethod?: string;
     rejectionReason?: string;
+    trashReason?: string;
   };
 }
 

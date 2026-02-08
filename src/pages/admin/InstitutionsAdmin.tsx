@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { institutionService } from '@/services/api';
 import { Institution } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
+import { generateApiKey, maskApiKey } from '@/utils/apiKeyGenerator';
 import {
   Card,
   CardContent,
@@ -15,7 +16,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Table,
@@ -38,10 +38,15 @@ import {
   Trash2,
   Upload,
   Check,
-  Loader2
+  Loader2,
+  RefreshCw,
+  Copy,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { formatDate } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const colorPresets = [
   { name: 'Azul', value: '220 80% 45%' },
@@ -54,11 +59,14 @@ const colorPresets = [
 
 export default function InstitutionsAdmin() {
   const { setTheme } = useTheme();
+  const { toast } = useToast();
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -90,9 +98,9 @@ export default function InstitutionsAdmin() {
       setEditingInstitution(institution);
       setFormData({
         name: institution.name,
-        taxId: institution.taxId,
-        apiKey: institution.apiKey,
-        allowedDomain: institution.allowedDomain,
+        taxId: institution.taxId || '',
+        apiKey: institution.apiKey || '',
+        allowedDomain: institution.allowedDomain || '',
         primaryColor: institution.primaryColor,
         logoUrl: institution.logoUrl,
       });
@@ -101,13 +109,50 @@ export default function InstitutionsAdmin() {
       setFormData({
         name: '',
         taxId: '',
-        apiKey: `ak_${Math.random().toString(36).substring(7)}`,
+        apiKey: generateApiKey(),
         allowedDomain: '',
         primaryColor: '220 80% 45%',
         logoUrl: '',
       });
     }
+    setShowApiKey(false);
     setIsDialogOpen(true);
+  };
+
+  const handleGenerateNewApiKey = () => {
+    const newKey = generateApiKey();
+    setFormData(prev => ({ ...prev, apiKey: newKey }));
+    toast({
+      title: 'API Key generada',
+      description: 'Se ha generado una nueva API Key',
+    });
+  };
+
+  const handleCopyApiKey = () => {
+    navigator.clipboard.writeText(formData.apiKey);
+    toast({
+      title: 'Copiado',
+      description: 'API Key copiada al portapapeles',
+    });
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: 'Archivo muy grande',
+          description: 'El logo no debe superar 2MB',
+          variant: 'destructive',
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setFormData(prev => ({ ...prev, logoUrl: event.target?.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSave = async () => {
@@ -120,8 +165,17 @@ export default function InstitutionsAdmin() {
       }
       await fetchInstitutions();
       setIsDialogOpen(false);
+      toast({
+        title: editingInstitution ? 'Institución actualizada' : 'Institución creada',
+        description: `${formData.name} ha sido ${editingInstitution ? 'actualizada' : 'creada'} correctamente`,
+      });
     } catch (error) {
       console.error('Failed to save institution:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo guardar la institución',
+        variant: 'destructive',
+      });
     }
     setIsSaving(false);
   };
@@ -132,6 +186,10 @@ export default function InstitutionsAdmin() {
     try {
       await institutionService.delete(id);
       await fetchInstitutions();
+      toast({
+        title: 'Institución eliminada',
+        description: 'La institución ha sido eliminada correctamente',
+      });
     } catch (error) {
       console.error('Failed to delete institution:', error);
     }
@@ -170,15 +228,15 @@ export default function InstitutionsAdmin() {
             Lista de todas las empresas configuradas en la plataforma
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Institución</TableHead>
-                <TableHead>ID Tributario</TableHead>
-                <TableHead>Dominio</TableHead>
-                <TableHead>Color</TableHead>
-                <TableHead>Creado</TableHead>
+                <TableHead className="hidden md:table-cell">ID Tributario</TableHead>
+                <TableHead className="hidden lg:table-cell">Dominio</TableHead>
+                <TableHead className="hidden sm:table-cell">Color</TableHead>
+                <TableHead className="hidden lg:table-cell">Creado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -188,38 +246,46 @@ export default function InstitutionsAdmin() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div 
-                        className="h-10 w-10 rounded-lg flex items-center justify-center"
+                        className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
                         style={{ backgroundColor: `hsl(${institution.primaryColor} / 0.15)` }}
                       >
-                        <Building2 
-                          className="h-5 w-5" 
-                          style={{ color: `hsl(${institution.primaryColor})` }}
-                        />
+                        {institution.logoUrl ? (
+                          <img 
+                            src={institution.logoUrl} 
+                            alt={institution.name}
+                            className="h-6 w-6 object-contain"
+                          />
+                        ) : (
+                          <Building2 
+                            className="h-5 w-5" 
+                            style={{ color: `hsl(${institution.primaryColor})` }}
+                          />
+                        )}
                       </div>
                       <div>
                         <p className="font-medium">{institution.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          {institution.apiKey.substring(0, 12)}...
+                        <p className="text-xs text-muted-foreground font-mono hidden sm:block">
+                          {maskApiKey(institution.apiKey || '')}
                         </p>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="font-mono text-sm">
+                  <TableCell className="font-mono text-sm hidden md:table-cell">
                     {institution.taxId}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <div className="flex items-center gap-1.5">
                       <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-sm">{institution.allowedDomain}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div 
                       className="h-6 w-12 rounded-md border"
                       style={{ backgroundColor: `hsl(${institution.primaryColor})` }}
                     />
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground hidden lg:table-cell">
                     {formatDate(institution.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
@@ -250,7 +316,7 @@ export default function InstitutionsAdmin() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingInstitution ? 'Editar Institución' : 'Nueva Institución'}
@@ -261,7 +327,7 @@ export default function InstitutionsAdmin() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Razón Social</Label>
                 <Input
@@ -283,25 +349,58 @@ export default function InstitutionsAdmin() {
             <div className="space-y-2">
               <Label>Dominio Permitido</Label>
               <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-muted-foreground" />
+                <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                 <Input
                   value={formData.allowedDomain}
                   onChange={(e) => setFormData(prev => ({ ...prev, allowedDomain: e.target.value }))}
-                  placeholder="empresa.signflow.com"
+                  placeholder="empresa.tufirmaok.cl"
                 />
               </div>
             </div>
 
+            {/* API Key with generator */}
             <div className="space-y-2">
-              <Label>API Key</Label>
+              <Label className="flex items-center gap-2">
+                <Key className="h-4 w-4" />
+                API Key
+              </Label>
               <div className="flex items-center gap-2">
-                <Key className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={formData.apiKey}
-                  readOnly
-                  className="font-mono text-sm bg-muted"
-                />
+                <div className="relative flex-1">
+                  <Input
+                    value={showApiKey ? formData.apiKey : maskApiKey(formData.apiKey)}
+                    readOnly
+                    className="font-mono text-sm bg-muted pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={handleCopyApiKey}
+                  title="Copiar"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={handleGenerateNewApiKey}
+                  title="Generar nueva"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Use esta API Key para integrar con sistemas externos
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -313,6 +412,7 @@ export default function InstitutionsAdmin() {
                 {colorPresets.map((color) => (
                   <button
                     key={color.value}
+                    type="button"
                     onClick={() => handlePreviewTheme(color.value)}
                     className={cn(
                       'h-10 w-10 rounded-lg border-2 transition-all',
@@ -333,14 +433,40 @@ export default function InstitutionsAdmin() {
 
             <div className="space-y-2">
               <Label>Logo de Empresa</Label>
-              <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer">
-                <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Arrastre o haga clic para subir
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  PNG, JPG o SVG (max. 2MB)
-                </p>
+              <input
+                type="file"
+                ref={logoInputRef}
+                accept="image/*"
+                onChange={handleLogoChange}
+                className="hidden"
+              />
+              <div 
+                onClick={() => logoInputRef.current?.click()}
+                className={cn(
+                  'border-2 border-dashed rounded-lg p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer',
+                  formData.logoUrl && 'border-success bg-success/5'
+                )}
+              >
+                {formData.logoUrl ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <img 
+                      src={formData.logoUrl} 
+                      alt="Logo preview" 
+                      className="h-16 w-auto object-contain"
+                    />
+                    <p className="text-sm text-success">Logo cargado</p>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Arrastre o haga clic para subir
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      PNG, JPG o SVG (max. 2MB)
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>

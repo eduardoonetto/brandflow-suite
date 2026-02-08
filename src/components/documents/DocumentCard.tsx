@@ -60,6 +60,11 @@ const statusConfig: Record<DocumentStatus, {
     icon: XCircle, 
     className: 'status-rejected' 
   },
+  trashed: { 
+    label: 'Papelera', 
+    icon: Trash2, 
+    className: 'status-draft' 
+  },
 };
 
 export function DocumentCard({ 

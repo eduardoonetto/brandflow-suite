@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { authService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
 import loginHero from '@/assets/login-hero.jpg';
 import dec5Logo from '@/assets/dec5-logo.png';
@@ -16,7 +15,6 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isDetecting, setIsDetecting] = useState(false);
   const [error, setError] = useState('');
   
   const { login, isAuthenticated } = useAuth();
@@ -34,7 +32,6 @@ export default function Login() {
     const detectFromDomain = async () => {
       const hostname = window.location.hostname;
       if (hostname.includes('.')) {
-        setIsDetecting(true);
         try {
           const response = await authService.detectInstitution(hostname);
           if (response.data) {
@@ -47,7 +44,6 @@ export default function Login() {
         } catch {
           // Ignore detection errors
         }
-        setIsDetecting(false);
       }
     };
     
@@ -125,8 +121,11 @@ export default function Login() {
           
           <div className="max-w-md">
             <h1 className="text-4xl font-bold text-white mb-4 leading-tight">
-              Gestiona y firma documentos de manera segura
+              tuFirmaOK.cl
             </h1>
+            <p className="text-2xl text-white/90 mb-2">
+              Gestiona y firma documentos de manera segura
+            </p>
             <p className="text-white/80 text-lg">
               Plataforma empresarial para la gestión de documentos digitales con 
               firmas electrónicas legalmente vinculantes.
@@ -162,12 +161,13 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+          <div className="lg:hidden flex flex-col items-center justify-center gap-2 mb-8">
             <img 
               src={dec5Logo} 
               alt="DEC5 Logo" 
               className="h-12 w-auto object-contain"
             />
+            <span className="text-xl font-bold text-primary">tuFirmaOK.cl</span>
           </div>
 
           <div className="mb-8">
@@ -272,10 +272,10 @@ export default function Login() {
           )}
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            ¿Necesita una cuenta?{' '}
-            <a href="#" className="text-primary hover:underline font-medium">
-              Contacte a su administrador
-            </a>
+            ¿No tiene una cuenta?{' '}
+            <Link to="/register" className="text-primary hover:underline font-medium">
+              Registrarse
+            </Link>
           </p>
         </div>
       </div>

@@ -18,7 +18,7 @@ const mockPersonalInstitution: Institution = {
   id: 'inst-personal',
   name: 'Mi Institución Personal',
   type: 'personal',
-  primaryColor: '220 80% 45%',
+  primaryColor: '280 70% 50%', // Purple - distinguishable color for personal
   logoUrl: '',
   createdAt: new Date(),
   updatedAt: new Date(),
