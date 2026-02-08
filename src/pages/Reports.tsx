@@ -42,6 +42,7 @@ const statusColors: Record<DocumentStatus, string> = {
   pending: 'hsl(38 92% 50%)',
   signed: 'hsl(142 71% 45%)',
   rejected: 'hsl(0 84% 60%)',
+  trashed: 'hsl(220 9% 46%)',
 };
 
 export default function Reports() {

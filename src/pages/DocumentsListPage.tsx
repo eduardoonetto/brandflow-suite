@@ -21,12 +21,13 @@ import {
   XCircle,
   FileText,
   Filter,
-  Upload
+  Upload,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Document } from '@/types';
 
-type DocumentTab = 'pending' | 'in-progress' | 'signed' | 'rejected';
+type DocumentTab = 'pending' | 'in-progress' | 'signed' | 'rejected' | 'trashed';
 
 interface DocumentsListPageProps {
   initialTab?: DocumentTab;
@@ -40,6 +41,7 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
     inProgressDocuments, 
     signedDocuments, 
     rejectedDocuments,
+    documents: allDocuments,
     updateDocument
   } = useDocuments();
   
@@ -49,6 +51,8 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const trashedDocuments = allDocuments.filter(d => d.status === 'trashed');
 
   const getDocumentsForTab = (): Document[] => {
     let docs: Document[] = [];
@@ -64,6 +68,9 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
         break;
       case 'rejected':
         docs = rejectedDocuments;
+        break;
+      case 'trashed':
+        docs = trashedDocuments;
         break;
     }
 
@@ -99,34 +106,11 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
   };
 
   const tabConfig = [
-    { 
-      value: 'pending', 
-      label: 'Por Firmar', 
-      icon: Clock, 
-      count: pendingDocuments.length,
-      color: 'text-warning'
-    },
-    { 
-      value: 'in-progress', 
-      label: 'En Proceso', 
-      icon: FileClock, 
-      count: inProgressDocuments.length,
-      color: 'text-blue-500'
-    },
-    { 
-      value: 'signed', 
-      label: 'Firmados', 
-      icon: CheckCircle, 
-      count: signedDocuments.length,
-      color: 'text-success'
-    },
-    { 
-      value: 'rejected', 
-      label: 'Rechazados', 
-      icon: XCircle, 
-      count: rejectedDocuments.length,
-      color: 'text-destructive'
-    },
+    { value: 'pending', label: 'Por Firmar', icon: Clock, count: pendingDocuments.length, color: 'text-warning' },
+    { value: 'in-progress', label: 'En Proceso', icon: FileClock, count: inProgressDocuments.length, color: 'text-blue-500' },
+    { value: 'signed', label: 'Firmados', icon: CheckCircle, count: signedDocuments.length, color: 'text-success' },
+    { value: 'rejected', label: 'Rechazados', icon: XCircle, count: rejectedDocuments.length, color: 'text-destructive' },
+    ...(!isPersonalInstitution ? [{ value: 'trashed', label: 'Papelera', icon: Trash2, count: trashedDocuments.length, color: 'text-muted-foreground' }] : []),
   ];
 
   return (

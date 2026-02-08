@@ -12,7 +12,8 @@ import {
   Edit3,
   MapPin,
   Monitor,
-  Globe
+  Globe,
+  Trash2
 } from 'lucide-react';
 
 interface AuditTimelineProps {
@@ -32,6 +33,7 @@ const eventConfig: Record<AuditEvent['type'], {
   signed: { icon: CheckCircle2, label: 'Firmado', color: 'text-success' },
   rejected: { icon: XCircle, label: 'Rechazado', color: 'text-destructive' },
   modified: { icon: Edit3, label: 'Modificado', color: 'text-muted-foreground' },
+  trashed: { icon: Trash2, label: 'Papelera', color: 'text-muted-foreground' },
 };
 
 export function AuditTimeline({ events, compact = false }: AuditTimelineProps) {

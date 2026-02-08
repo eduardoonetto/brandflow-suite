@@ -11,6 +11,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 
 // Pages
 import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import DocumentsListPage from "@/pages/DocumentsListPage";
 import DocumentEditor from "@/pages/DocumentEditor";
@@ -32,6 +33,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       
       <Route element={
@@ -47,6 +49,7 @@ function AppRoutes() {
         <Route path="/documents/in-progress" element={<DocumentsListPage initialTab="in-progress" />} />
         <Route path="/documents/signed" element={<DocumentsListPage initialTab="signed" />} />
         <Route path="/documents/rejected" element={<DocumentsListPage initialTab="rejected" />} />
+        <Route path="/documents/trashed" element={<DocumentsListPage initialTab="trashed" />} />
         <Route path="/documents/new" element={<DocumentEditor />} />
         <Route path="/documents/:id" element={<DocumentEditor />} />
         <Route path="/documents/:id/edit" element={<DocumentEditor />} />

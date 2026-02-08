@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   User, 
   Bell, 
@@ -29,9 +30,11 @@ import {
   Mail,
   Save,
   Check,
-  Upload
+  Upload,
+  Camera
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const colorPresets = [
   { name: 'Azul', value: '220 80% 45%' },
@@ -44,7 +47,10 @@ const colorPresets = [
 export default function Settings() {
   const { user, institution } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   const [isSaved, setIsSaved] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [notifications, setNotifications] = useState({
     emailOnSign: true,
@@ -53,9 +59,40 @@ export default function Settings() {
     browserPush: true,
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) {
+        toast({
+          title: 'Archivo muy grande',
+          description: 'La imagen no debe superar 1MB',
+          variant: 'destructive',
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setAvatarUrl(event.target?.result as string);
+        toast({
+          title: 'Foto actualizada',
+          description: 'Tu foto de perfil ha sido cambiada',
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = () => {
     setIsSaved(true);
+    toast({
+      title: 'Cambios guardados',
+      description: 'Tu configuración ha sido actualizada',
+    });
     setTimeout(() => setIsSaved(false), 2000);
+  };
+
+  const getInitials = (name: string) => {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
   };
 
   return (
@@ -69,22 +106,22 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
-            Perfil
+            <span className="hidden sm:inline">Perfil</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
-            Notificaciones
+            <span className="hidden sm:inline">Notificaciones</span>
           </TabsTrigger>
           <TabsTrigger value="appearance" className="gap-2">
             <Palette className="h-4 w-4" />
-            Apariencia
+            <span className="hidden sm:inline">Apariencia</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="gap-2">
             <Shield className="h-4 w-4" />
-            Seguridad
+            <span className="hidden sm:inline">Seguridad</span>
           </TabsTrigger>
         </TabsList>
 
@@ -99,13 +136,31 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-6">
-                <div className="h-20 w-20 rounded-full bg-gradient-primary flex items-center justify-center">
-                  <span className="text-2xl font-bold text-primary-foreground">
-                    {user?.name.charAt(0)}
-                  </span>
+                <div className="relative">
+                  <Avatar className="h-20 w-20">
+                    {avatarUrl ? (
+                      <AvatarImage src={avatarUrl} alt="Avatar" />
+                    ) : null}
+                    <AvatarFallback className="text-2xl bg-gradient-primary text-primary-foreground">
+                      {getInitials(user?.name || '')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                  </button>
                 </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
                 <div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="h-4 w-4 mr-2" />
                     Cambiar foto
                   </Button>
@@ -117,7 +172,7 @@ export default function Settings() {
 
               <Separator />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nombre Completo</Label>
                   <Input defaultValue={user?.name} />
@@ -128,11 +183,11 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Rol</Label>
                   <Input 
-                    value={user?.role === 'admin' ? 'Administrador' : 'Usuario'} 
+                    value={user?.role === 'admin' ? 'Administrador' : user?.role === 'superadmin' ? 'Super Admin' : 'Usuario'} 
                     disabled 
                     className="bg-muted"
                   />
@@ -327,7 +382,7 @@ export default function Settings() {
                   <Label>Contraseña actual</Label>
                   <Input type="password" placeholder="••••••••" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Nueva contraseña</Label>
                     <Input type="password" placeholder="••••••••" />

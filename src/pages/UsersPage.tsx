@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useInstitution } from '@/context/InstitutionContext';
-import { InstitutionUser, InstitutionRole } from '@/types';
+import { InstitutionRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +45,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { CreateUserModal } from '@/components/users/CreateUserModal';
+import { useToast } from '@/hooks/use-toast';
 
 const roleColors: Record<InstitutionRole, string> = {
   'Admin': '220 80% 45%',
@@ -57,8 +59,10 @@ const roleColors: Record<InstitutionRole, string> = {
 
 export default function UsersPage() {
   const { currentInstitution, institutionUsers, isPersonalInstitution } = useInstitution();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Don't show users for personal institutions
   if (isPersonalInstitution) {
@@ -101,6 +105,13 @@ export default function UsersPage() {
     return acc;
   }, {} as Record<string, number>);
 
+  const handleUserCreated = () => {
+    toast({
+      title: 'Usuario creado',
+      description: 'El usuario ha sido añadido a la institución',
+    });
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -112,21 +123,24 @@ export default function UsersPage() {
           </p>
         </div>
         
-        <Button className="bg-gradient-primary hover:opacity-90">
+        <Button 
+          className="bg-gradient-primary hover:opacity-90"
+          onClick={() => setShowCreateModal(true)}
+        >
           <Plus className="h-4 w-4 mr-2" />
-          Invitar Usuario
+          Nuevo Usuario
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold">{institutionUsers.length}</p>
             <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
-        {Object.entries(roleStats).map(([role, count]) => (
+        {Object.entries(roleStats).slice(0, 5).map(([role, count]) => (
           <Card key={role}>
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold">{count}</p>
@@ -155,8 +169,8 @@ export default function UsersPage() {
             className="pl-10"
           />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter} >
-          <SelectTrigger className="w-40">
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Filtrar por rol" />
           </SelectTrigger>
           <SelectContent>
@@ -179,14 +193,14 @@ export default function UsersPage() {
             {filteredUsers.length} usuarios en esta institución
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Usuario</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Rol</TableHead>
-                <TableHead>Fecha Ingreso</TableHead>
+                <TableHead className="hidden sm:table-cell">Email</TableHead>
+                <TableHead>Roles</TableHead>
+                <TableHead className="hidden md:table-cell">Fecha Ingreso</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -200,10 +214,13 @@ export default function UsersPage() {
                           {getInitials(iu.user.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium">{iu.user.name}</span>
+                      <div>
+                        <span className="font-medium block">{iu.user.name}</span>
+                        <span className="text-xs text-muted-foreground sm:hidden">{iu.user.email}</span>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground hidden sm:table-cell">
                     {iu.user.email}
                   </TableCell>
                   <TableCell>
@@ -211,6 +228,7 @@ export default function UsersPage() {
                       {iu.roles.map(role => (
                         <Badge
                           key={role}
+                          className="text-xs"
                           style={{ 
                             backgroundColor: `hsl(${roleColors[role]} / 0.15)`,
                             color: `hsl(${roleColors[role]})`
@@ -222,7 +240,7 @@ export default function UsersPage() {
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground hidden md:table-cell">
                     {format(iu.joinedAt, 'd MMM yyyy', { locale: es })}
                   </TableCell>
                   <TableCell>
@@ -235,7 +253,7 @@ export default function UsersPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>
                           <Edit className="h-4 w-4 mr-2" />
-                          Editar Rol
+                          Editar Roles
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <Mail className="h-4 w-4 mr-2" />
@@ -254,6 +272,13 @@ export default function UsersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Create User Modal */}
+      <CreateUserModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onSuccess={handleUserCreated}
+      />
     </div>
   );
 }
