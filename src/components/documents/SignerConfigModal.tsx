@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,8 @@ interface SignerConfig {
   name?: string;
   rut?: string;
   roleId?: InstitutionRole;
+  specificUserId?: string; // specific person from a role
+  anyoneWithRole?: boolean; // or anyone with that role
   signerType: SignerType;
   signatureType: SignatureType;
   notificationType: NotificationType;
@@ -76,6 +79,7 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
   const [signers, setSigners] = useState<SignerConfig[]>([]);
   const [showRoleUsersModal, setShowRoleUsersModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<InstitutionRole | null>(null);
+  const [selectingForSignerId, setSelectingForSignerId] = useState<string | null>(null);
 
   const addSigner = () => {
     setSigners([
@@ -89,6 +93,7 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
         signerType: 'signer',
         signatureType: 'pin',
         notificationType: 'all',
+        anyoneWithRole: true,
       },
     ]);
   };
@@ -102,16 +107,32 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
   };
 
   const handleConfirm = () => {
-    const mappedSigners = signers.map((s, idx) => ({
-      email: s.email || '',
-      name: s.name || '',
-      rut: s.rut,
-      roleId: s.roleId,
-      order: idx + 1,
-      signerType: s.signerType,
-      signatureType: s.signatureType,
-      notificationType: s.notificationType,
-    }));
+    const mappedSigners = signers.map((s, idx) => {
+      // If role-based with specific user, populate their info
+      if (s.type === 'role' && s.specificUserId) {
+        const user = institutionUsers.find(u => u.userId === s.specificUserId);
+        return {
+          email: user?.user.email || '',
+          name: user?.user.name || '',
+          rut: s.rut,
+          roleId: s.roleId,
+          order: idx + 1,
+          signerType: s.signerType,
+          signatureType: s.signatureType,
+          notificationType: s.notificationType,
+        };
+      }
+      return {
+        email: s.email || '',
+        name: s.name || (s.anyoneWithRole ? `Cualquiera con rol ${s.roleId}` : ''),
+        rut: s.rut,
+        roleId: s.roleId,
+        order: idx + 1,
+        signerType: s.signerType,
+        signatureType: s.signatureType,
+        notificationType: s.notificationType,
+      };
+    });
     onConfirm(mappedSigners);
     setSigners([]);
     onOpenChange(false);
@@ -123,6 +144,17 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const handleSelectSpecificUser = (signerId: string, userId: string, userName: string, userEmail: string) => {
+    updateSigner(signerId, { 
+      specificUserId: userId, 
+      anyoneWithRole: false,
+      name: userName,
+      email: userEmail,
+    });
+    setShowRoleUsersModal(false);
+    setSelectingForSignerId(null);
   };
 
   return (
@@ -152,11 +184,7 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
                   <div key={signer.id} className="border rounded-lg p-4 space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">Firmante {idx + 1}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => removeSigner(signer.id)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => removeSigner(signer.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -166,21 +194,19 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
                       <Label className="text-xs text-muted-foreground">Tipo de Firmante</Label>
                       <RadioGroup
                         value={signer.type}
-                        onValueChange={(v) => updateSigner(signer.id, { type: v as 'individual' | 'role' })}
+                        onValueChange={(v) => updateSigner(signer.id, { type: v as 'individual' | 'role', specificUserId: undefined, anyoneWithRole: true })}
                         className="flex gap-4 mt-2"
                       >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="individual" id={`ind-${signer.id}`} />
                           <Label htmlFor={`ind-${signer.id}`} className="flex items-center gap-2 cursor-pointer">
-                            <User className="h-4 w-4" />
-                            Individual
+                            <User className="h-4 w-4" />Individual
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="role" id={`role-${signer.id}`} />
                           <Label htmlFor={`role-${signer.id}`} className="flex items-center gap-2 cursor-pointer">
-                            <Shield className="h-4 w-4" />
-                            Por Rol
+                            <Shield className="h-4 w-4" />Por Rol
                           </Label>
                         </div>
                       </RadioGroup>
@@ -190,64 +216,71 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                           <Label>RUT</Label>
-                          <Input
-                            placeholder="12.345.678-9"
-                            value={signer.rut || ''}
-                            onChange={(e) => updateSigner(signer.id, { rut: e.target.value })}
-                          />
+                          <Input placeholder="12.345.678-9" value={signer.rut || ''} onChange={(e) => updateSigner(signer.id, { rut: e.target.value })} />
                         </div>
                         <div>
                           <Label>Nombre</Label>
-                          <Input
-                            placeholder="Nombre completo"
-                            value={signer.name || ''}
-                            onChange={(e) => updateSigner(signer.id, { name: e.target.value })}
-                          />
+                          <Input placeholder="Nombre completo" value={signer.name || ''} onChange={(e) => updateSigner(signer.id, { name: e.target.value })} />
                         </div>
                         <div>
                           <Label>Email</Label>
-                          <Input
-                            type="email"
-                            placeholder="correo@ejemplo.com"
-                            value={signer.email || ''}
-                            onChange={(e) => updateSigner(signer.id, { email: e.target.value })}
-                          />
+                          <Input type="email" placeholder="correo@ejemplo.com" value={signer.email || ''} onChange={(e) => updateSigner(signer.id, { email: e.target.value })} />
                         </div>
                       </div>
                     ) : (
-                      <div>
-                        <Label>Seleccionar Rol</Label>
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={signer.roleId}
-                            onValueChange={(v) => updateSigner(signer.id, { roleId: v as InstitutionRole })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccione un rol" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Admin">Admin</SelectItem>
-                              <SelectItem value="RRHH">RRHH</SelectItem>
-                              <SelectItem value="Trabajador">Trabajador</SelectItem>
-                              <SelectItem value="Finanzas">Finanzas</SelectItem>
-                              <SelectItem value="Legal">Legal</SelectItem>
-                              <SelectItem value="Gerencia">Gerencia</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {signer.roleId && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedRole(signer.roleId!);
-                                setShowRoleUsersModal(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              Ver usuarios ({getUsersByRole(signer.roleId).length})
-                            </Button>
-                          )}
+                      <div className="space-y-3">
+                        <div>
+                          <Label>Seleccionar Rol</Label>
+                          <div className="flex items-center gap-2">
+                            <Select value={signer.roleId} onValueChange={(v) => updateSigner(signer.id, { roleId: v as InstitutionRole, specificUserId: undefined, anyoneWithRole: true })}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccione un rol" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(['Admin', 'RRHH', 'Trabajador', 'Finanzas', 'Legal', 'Gerencia'] as InstitutionRole[]).map(role => (
+                                  <SelectItem key={role} value={role}>{role}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {signer.roleId && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedRole(signer.roleId!);
+                                  setSelectingForSignerId(signer.id);
+                                  setShowRoleUsersModal(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Seleccionar ({getUsersByRole(signer.roleId).length})
+                              </Button>
+                            )}
+                          </div>
                         </div>
+
+                        {signer.roleId && (
+                          <div className="bg-muted/50 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Checkbox
+                                id={`anyone-${signer.id}`}
+                                checked={signer.anyoneWithRole}
+                                onCheckedChange={(checked) => updateSigner(signer.id, { 
+                                  anyoneWithRole: !!checked, 
+                                  specificUserId: checked ? undefined : signer.specificUserId 
+                                })}
+                              />
+                              <Label htmlFor={`anyone-${signer.id}`} className="text-sm cursor-pointer">
+                                Cualquier persona con el rol {signer.roleId}
+                              </Label>
+                            </div>
+                            {signer.specificUserId && !signer.anyoneWithRole && (
+                              <p className="text-sm text-primary font-medium">
+                                ✓ {signer.name} ({signer.email})
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -255,38 +288,18 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div>
                         <Label>Tipo de Participante</Label>
-                        <Select
-                          value={signer.signerType}
-                          onValueChange={(v) => updateSigner(signer.id, { signerType: v as SignerType })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
+                        <Select value={signer.signerType} onValueChange={(v) => updateSigner(signer.id, { signerType: v as SignerType })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="signer">
-                              <div className="flex items-center gap-2">
-                                <PenLine className="h-4 w-4" />
-                                Firmante
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="approver">
-                              <div className="flex items-center gap-2">
-                                <Eye className="h-4 w-4" />
-                                Visador
-                              </div>
-                            </SelectItem>
+                            <SelectItem value="signer"><div className="flex items-center gap-2"><PenLine className="h-4 w-4" />Firmante</div></SelectItem>
+                            <SelectItem value="approver"><div className="flex items-center gap-2"><Eye className="h-4 w-4" />Visador</div></SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label>Tipo de Firma</Label>
-                        <Select
-                          value={signer.signatureType}
-                          onValueChange={(v) => updateSigner(signer.id, { signatureType: v as SignatureType })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
+                        <Select value={signer.signatureType} onValueChange={(v) => updateSigner(signer.id, { signatureType: v as SignatureType })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="pin">PIN por Email</SelectItem>
                             <SelectItem value="cedula">Cédula de Identidad</SelectItem>
@@ -294,17 +307,9 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
                         </Select>
                       </div>
                       <div>
-                        <Label className="flex items-center gap-1">
-                          <Bell className="h-3 w-3" />
-                          Notificación
-                        </Label>
-                        <Select
-                          value={signer.notificationType}
-                          onValueChange={(v) => updateSigner(signer.id, { notificationType: v as NotificationType })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
+                        <Label className="flex items-center gap-1"><Bell className="h-3 w-3" />Notificación</Label>
+                        <Select value={signer.notificationType} onValueChange={(v) => updateSigner(signer.id, { notificationType: v as NotificationType })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">Todas</SelectItem>
                             <SelectItem value="pending">Pendiente</SelectItem>
@@ -326,17 +331,13 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleConfirm} disabled={signers.length === 0}>
-              Confirmar Firmantes
-            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button onClick={handleConfirm} disabled={signers.length === 0}>Confirmar Firmantes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Role Users Modal */}
+      {/* Role Users Modal - with selection capability */}
       <Dialog open={showRoleUsersModal} onOpenChange={setShowRoleUsersModal}>
         <DialogContent>
           <DialogHeader>
@@ -349,16 +350,24 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
               >
                 {selectedRole}
               </Badge>
-              Usuarios con este rol
+              Seleccionar usuario
             </DialogTitle>
             <DialogDescription>
-              Estos usuarios recibirán la solicitud de firma
+              Elija una persona específica o deje "cualquiera con este rol"
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {selectedRole && getUsersByRole(selectedRole).map(iu => (
-              <div key={iu.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <button
+                key={iu.id}
+                onClick={() => {
+                  if (selectingForSignerId) {
+                    handleSelectSpecificUser(selectingForSignerId, iu.userId, iu.user.name, iu.user.email);
+                  }
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+              >
                 <Avatar>
                   <AvatarFallback>{getInitials(iu.user.name)}</AvatarFallback>
                 </Avatar>
@@ -366,17 +375,15 @@ export function SignerConfigModal({ open, onOpenChange, onConfirm }: SignerConfi
                   <p className="font-medium truncate">{iu.user.name}</p>
                   <p className="text-sm text-muted-foreground truncate">{iu.user.email}</p>
                 </div>
-              </div>
+              </button>
             ))}
             {selectedRole && getUsersByRole(selectedRole).length === 0 && (
-              <p className="text-center text-muted-foreground py-4">
-                No hay usuarios con este rol
-              </p>
+              <p className="text-center text-muted-foreground py-4">No hay usuarios con este rol</p>
             )}
           </div>
 
           <DialogFooter>
-            <Button onClick={() => setShowRoleUsersModal(false)}>Cerrar</Button>
+            <Button variant="outline" onClick={() => setShowRoleUsersModal(false)}>Cerrar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

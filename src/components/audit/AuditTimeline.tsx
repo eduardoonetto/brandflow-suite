@@ -13,7 +13,8 @@ import {
   MapPin,
   Monitor,
   Globe,
-  Trash2
+  Trash2,
+  Bell
 } from 'lucide-react';
 
 interface AuditTimelineProps {
@@ -27,7 +28,7 @@ const eventConfig: Record<AuditEvent['type'], {
   color: string;
 }> = {
   created: { icon: FileText, label: 'Creado', color: 'text-primary' },
-  sent: { icon: Send, label: 'Enviado', color: 'text-secondary' },
+  sent: { icon: Bell, label: 'Notificación enviada', color: 'text-blue-500' },
   delivered: { icon: Mail, label: 'Entregado', color: 'text-success' },
   opened: { icon: Eye, label: 'Abierto', color: 'text-warning' },
   signed: { icon: CheckCircle2, label: 'Firmado', color: 'text-success' },
@@ -55,6 +56,9 @@ export function AuditTimeline({ events, compact = false }: AuditTimelineProps) {
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium truncate">
                   {config.label}
+                  {event.type === 'sent' && event.metadata.recipientEmail && (
+                    <span className="font-normal text-muted-foreground"> → {event.metadata.recipientEmail}</span>
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {formatDateTime(event.timestamp)}
@@ -72,10 +76,8 @@ export function AuditTimeline({ events, compact = false }: AuditTimelineProps) {
       <h3 className="font-semibold mb-6">Historial de Actividad</h3>
       
       <div className="relative">
-        {/* Timeline line */}
         <div className="absolute left-[17px] top-2 bottom-2 w-0.5 bg-border" />
         
-        {/* Events */}
         <div className="space-y-6">
           {events.map((event) => {
             const config = eventConfig[event.type];
@@ -83,31 +85,31 @@ export function AuditTimeline({ events, compact = false }: AuditTimelineProps) {
             
             return (
               <div key={event.id} className="relative flex gap-4">
-                {/* Icon */}
                 <div className={cn(
                   'relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 bg-background',
-                  config.color,
-                  'border-current'
+                  config.color, 'border-current'
                 )}>
                   <Icon className="h-4 w-4" />
                 </div>
                 
-                {/* Content */}
                 <div className="flex-1 pt-1">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium">{config.label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDateTime(event.timestamp)}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{formatDateTime(event.timestamp)}</span>
                   </div>
                   
                   <p className="text-sm text-muted-foreground mb-2">
                     Por {event.actorEmail}
                   </p>
                   
-                  {/* Metadata */}
-                  {(event.metadata.ipAddress || event.metadata.userAgent || event.metadata.location || event.metadata.signerName) && (
+                  {(event.metadata.ipAddress || event.metadata.userAgent || event.metadata.location || event.metadata.signerName || event.metadata.recipientEmail) && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+                      {event.metadata.recipientEmail && event.type === 'sent' && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Mail className="h-3 w-3" />
+                          <span>Destinatario: {event.metadata.recipientEmail}</span>
+                        </div>
+                      )}
                       {event.metadata.signerName && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <CheckCircle2 className="h-3 w-3" />

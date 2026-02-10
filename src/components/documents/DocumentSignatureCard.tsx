@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDocuments } from '@/context/DocumentContext';
 import { Document, DocumentSigner } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,14 +26,18 @@ import { es } from 'date-fns/locale';
 interface DocumentSignatureCardProps {
   document: Document;
   showSignButton?: boolean;
+  showRejectButton?: boolean;
   onSign?: () => void;
+  onReject?: () => void;
   onView?: () => void;
 }
 
 export function DocumentSignatureCard({ 
   document, 
   showSignButton = true,
+  showRejectButton = false,
   onSign,
+  onReject,
   onView
 }: DocumentSignatureCardProps) {
   const navigate = useNavigate();
@@ -70,12 +73,7 @@ export function DocumentSignatureCard({
   };
 
   const getSignerInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const getSignerStatusColor = (signer: DocumentSigner) => {
@@ -126,9 +124,6 @@ export function DocumentSignatureCard({
           ))}
           {document.fileSize && <span>{document.fileSize}</span>}
           <span>{format(document.createdAt, 'd MMM yyyy', { locale: es })}</span>
-          {document.expiresAt && (
-            <span>Vence: {format(document.expiresAt, 'd MMM yyyy', { locale: es })}</span>
-          )}
         </div>
 
         {/* Signers */}
@@ -198,10 +193,6 @@ export function DocumentSignatureCard({
             <Eye className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Ver</span>
           </Button>
-          <Button variant="outline" size="sm" className="flex-1 hidden sm:flex">
-            <Download className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Descargar</span>
-          </Button>
           {showSignButton && document.status === 'pending' && (
             <Button 
               size="sm" 
@@ -210,6 +201,17 @@ export function DocumentSignatureCard({
             >
               <PenLine className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Firmar</span>
+            </Button>
+          )}
+          {showRejectButton && document.status === 'pending' && (
+            <Button 
+              size="sm" 
+              variant="destructive"
+              className="flex-1"
+              onClick={onReject}
+            >
+              <XCircle className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Rechazar</span>
             </Button>
           )}
         </div>

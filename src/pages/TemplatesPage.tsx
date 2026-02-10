@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useDocuments } from '@/context/DocumentContext';
 import { useInstitution } from '@/context/InstitutionContext';
 import { CreateDocumentModal } from '@/components/documents/CreateDocumentModal';
-import { DocumentTemplate } from '@/types';
+import { SignerConfigModal } from '@/components/documents/SignerConfigModal';
+import { DocumentTemplate, DocumentSigner } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -33,15 +34,18 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
-  const { templates, deleteTemplate } = useDocuments();
-  const { isPersonalInstitution } = useInstitution();
+  const { templates, deleteTemplate, addDocument } = useDocuments();
+  const { isPersonalInstitution, currentInstitution } = useInstitution();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showSignerModal, setShowSignerModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
 
-  // Personal institutions can't create templates
   if (isPersonalInstitution) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
@@ -51,7 +55,6 @@ export default function TemplatesPage() {
         <h3 className="font-semibold mb-1">Plantillas no disponibles</h3>
         <p className="text-muted-foreground text-sm max-w-md px-4">
           Solo las instituciones organizacionales pueden crear y gestionar plantillas.
-          Cambia a una institución organizacional para acceder a esta funcionalidad.
         </p>
       </div>
     );
@@ -69,15 +72,43 @@ export default function TemplatesPage() {
 
   const groupedTemplates = filteredTemplates.reduce((acc, tmpl) => {
     const category = tmpl.category;
-    if (!acc[category]) {
-      acc[category] = [];
-    }
+    if (!acc[category]) acc[category] = [];
     acc[category].push(tmpl);
     return acc;
   }, {} as Record<string, DocumentTemplate[]>);
 
-  const handleCreateFromTemplate = (templateId: string) => {
-    navigate(`/documents/new?template=${templateId}`);
+  const handleSendToSign = (template: DocumentTemplate) => {
+    setSelectedTemplate(template);
+    setShowSignerModal(true);
+  };
+
+  const handleSignersConfirmed = (signers: Omit<DocumentSigner, 'id' | 'documentId' | 'status'>[]) => {
+    if (!selectedTemplate) return;
+    addDocument({
+      templateId: selectedTemplate.id,
+      title: selectedTemplate.title,
+      description: selectedTemplate.description,
+      content: selectedTemplate.content,
+      status: 'pending',
+      tags: selectedTemplate.tags,
+      institutionId: currentInstitution?.id || '',
+      createdBy: 'user-1',
+      variables: selectedTemplate.variables,
+      signers: signers.map((s, idx) => ({
+        ...s,
+        id: `signer-${Date.now()}-${idx}`,
+        documentId: '',
+        status: 'pending' as const,
+      })),
+      signatures: [],
+    });
+    setShowSignerModal(false);
+    setSelectedTemplate(null);
+    toast({
+      title: 'Documento creado',
+      description: 'El documento ha sido enviado a los firmantes',
+    });
+    navigate('/documents/pending');
   };
 
   const handleDeleteTemplate = (id: string) => {
@@ -88,7 +119,6 @@ export default function TemplatesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Plantillas de Documentos</h1>
@@ -96,7 +126,6 @@ export default function TemplatesPage() {
             Crea y administra plantillas reutilizables para tus documentos
           </p>
         </div>
-        
         <Button 
           onClick={() => setShowCreateModal(true)}
           className="bg-gradient-primary hover:opacity-90"
@@ -106,7 +135,6 @@ export default function TemplatesPage() {
         </Button>
       </div>
 
-      {/* Search */}
       <div className="relative w-full max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -117,16 +145,13 @@ export default function TemplatesPage() {
         />
       </div>
 
-      {/* Templates grouped by category */}
       {Object.keys(groupedTemplates).length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
             <FileText className="h-8 w-8 text-muted-foreground" />
           </div>
           <h3 className="font-semibold mb-1">No hay plantillas</h3>
-          <p className="text-muted-foreground text-sm mb-4">
-            Crea tu primera plantilla para empezar
-          </p>
+          <p className="text-muted-foreground text-sm mb-4">Crea tu primera plantilla para empezar</p>
           <Button onClick={() => setShowCreateModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Crear Plantilla
@@ -147,50 +172,34 @@ export default function TemplatesPage() {
                             <FileText className="h-5 w-5 text-primary" />
                           </div>
                           <div className="min-w-0">
-                            <CardTitle className="text-base truncate">
-                              {template.title}
-                            </CardTitle>
-                            <CardDescription className="line-clamp-2">
-                              {template.description}
-                            </CardDescription>
+                            <CardTitle className="text-base truncate">{template.title}</CardTitle>
+                            <CardDescription className="line-clamp-2">{template.description}</CardDescription>
                           </div>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => navigate(`/templates/${template.id}`)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Ver
+                              <Eye className="h-4 w-4 mr-2" />Ver
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => navigate(`/templates/${template.id}/edit`)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
+                              <Edit className="h-4 w-4 mr-2" />Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem>
-                              <Copy className="h-4 w-4 mr-2" />
-                              Duplicar
+                              <Copy className="h-4 w-4 mr-2" />Duplicar
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteTemplate(template.id)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Eliminar
+                            <DropdownMenuItem onClick={() => handleDeleteTemplate(template.id)} className="text-destructive focus:text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" />Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {/* Tags */}
                       <div className="flex flex-wrap gap-1">
                         {template.tags.map(tag => (
                           <Badge 
@@ -206,22 +215,16 @@ export default function TemplatesPage() {
                           </Badge>
                         ))}
                       </div>
-
-                      {/* Variables count */}
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <span>{template.variables.length} variables</span>
-                        <span>
-                          {format(template.updatedAt, 'd MMM yyyy', { locale: es })}
-                        </span>
+                        <span>{format(template.updatedAt, 'd MMM yyyy', { locale: es })}</span>
                       </div>
-
-                      {/* Action button */}
                       <Button 
                         className="w-full bg-gradient-primary hover:opacity-90"
-                        onClick={() => handleCreateFromTemplate(template.id)}
+                        onClick={() => handleSendToSign(template)}
                       >
                         <Send className="h-4 w-4 mr-2" />
-                        Usar Plantilla
+                        Enviar a Firmar
                       </Button>
                     </CardContent>
                   </Card>
@@ -236,7 +239,12 @@ export default function TemplatesPage() {
         open={showCreateModal} 
         onOpenChange={setShowCreateModal}
         mode="template"
-        showSignerConfig={true}
+      />
+
+      <SignerConfigModal
+        open={showSignerModal}
+        onOpenChange={setShowSignerModal}
+        onConfirm={handleSignersConfirmed}
       />
     </div>
   );
