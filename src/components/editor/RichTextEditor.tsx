@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
@@ -29,7 +29,6 @@ import {
   Heading3,
   Quote,
   Table as TableIcon,
-  TableProperties,
   Strikethrough,
   Code,
   Minus
@@ -74,7 +73,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
       TableCell,
       TableHeader,
     ],
-    content,
+    content: content || '<p></p>',
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
@@ -85,8 +84,15 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
     },
   });
 
+  // Sync content from parent when it changes externally
+  useEffect(() => {
+    if (editor && content && editor.getHTML() !== content) {
+      editor.commands.setContent(content, { emitUpdate: false });
+    }
+  }, [content, editor]);
+
   if (!editor) {
-    return null;
+    return <div className="border rounded-lg p-4 min-h-[300px] bg-muted/30 animate-pulse" />;
   }
 
   const addImage = () => {
@@ -131,20 +137,24 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
     title?: string;
     disabled?: boolean;
   }) => (
-    <Button
+    <button
       type="button"
-      variant="ghost"
-      size="sm"
-      onClick={onClick}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }}
       title={title}
       disabled={disabled}
       className={cn(
-        'h-8 w-8 p-0',
+        'h-8 w-8 p-0 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors',
+        'hover:bg-accent hover:text-accent-foreground',
+        'disabled:pointer-events-none disabled:opacity-50',
         isActive && 'bg-muted text-foreground'
       )}
     >
       {children}
-    </Button>
+    </button>
   );
 
   return (
@@ -294,18 +304,16 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         {/* Table Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               title="Tabla"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <TableIcon className="h-4 w-4" />
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={insertTable}>
+            <DropdownMenuItem onClick={() => insertTable()}>
               <TableIcon className="h-4 w-4 mr-2" />
               Insertar tabla 3x3
             </DropdownMenuItem>
@@ -350,21 +358,19 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         {/* Image Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               title="Insertar imagen"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <ImageIcon className="h-4 w-4" />
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={addImageFromFile}>
+            <DropdownMenuItem onClick={() => addImageFromFile()}>
               Subir imagen
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={addImage}>
+            <DropdownMenuItem onClick={() => addImage()}>
               Insertar desde URL
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -374,7 +380,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
       {/* Editor Content */}
       <EditorContent 
         editor={editor} 
-        className="[&_.ProseMirror]:min-h-[300px] [&_.ProseMirror]:focus:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_table]:border-collapse [&_.ProseMirror_table]:w-full [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-muted [&_.ProseMirror_td]:p-2 [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-muted [&_.ProseMirror_th]:p-2 [&_.ProseMirror_th]:bg-muted/50 [&_.ProseMirror_th]:font-semibold [&_.ProseMirror_img]:max-w-full [&_.ProseMirror_img]:h-auto [&_.ProseMirror_img]:rounded-lg"
+        className="[&_.ProseMirror]:min-h-[300px] [&_.ProseMirror]:p-4 [&_.ProseMirror]:focus:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_h1]:text-2xl [&_.ProseMirror_h1]:font-bold [&_.ProseMirror_h1]:mb-4 [&_.ProseMirror_h2]:text-xl [&_.ProseMirror_h2]:font-semibold [&_.ProseMirror_h2]:mb-3 [&_.ProseMirror_h3]:text-lg [&_.ProseMirror_h3]:font-medium [&_.ProseMirror_h3]:mb-2 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-6 [&_.ProseMirror_ul]:mb-3 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-6 [&_.ProseMirror_ol]:mb-3 [&_.ProseMirror_li]:mb-1 [&_.ProseMirror_blockquote]:border-l-4 [&_.ProseMirror_blockquote]:border-muted-foreground/30 [&_.ProseMirror_blockquote]:pl-4 [&_.ProseMirror_blockquote]:italic [&_.ProseMirror_blockquote]:my-3 [&_.ProseMirror_hr]:my-4 [&_.ProseMirror_hr]:border-muted [&_.ProseMirror_table]:border-collapse [&_.ProseMirror_table]:w-full [&_.ProseMirror_td]:border [&_.ProseMirror_td]:border-muted [&_.ProseMirror_td]:p-2 [&_.ProseMirror_th]:border [&_.ProseMirror_th]:border-muted [&_.ProseMirror_th]:p-2 [&_.ProseMirror_th]:bg-muted/50 [&_.ProseMirror_th]:font-semibold [&_.ProseMirror_img]:max-w-full [&_.ProseMirror_img]:h-auto [&_.ProseMirror_img]:rounded-lg [&_.ProseMirror_p]:mb-2 [&_.ProseMirror_strong]:font-bold [&_.ProseMirror_em]:italic [&_.ProseMirror_u]:underline [&_.ProseMirror_s]:line-through [&_.ProseMirror_code]:bg-muted [&_.ProseMirror_code]:px-1.5 [&_.ProseMirror_code]:py-0.5 [&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:text-sm [&_.ProseMirror_code]:font-mono"
       />
     </div>
   );

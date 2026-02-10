@@ -4,52 +4,54 @@ import { AppSidebar } from './AppSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, FileText } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import dec5Logo from '@/assets/dec5-logo.png';
+import eoneLogo from '@/assets/eone-logo.png';
 
 export function MainLayout() {
   const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // On mobile, use a sheet for the sidebar
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Mobile header */}
+      <div className="min-h-screen bg-background flex flex-col">
         <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-sidebar border-b border-sidebar-border flex items-center px-4">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="mr-2">
+              <Button variant="ghost" size="icon" className="mr-2 text-sidebar-foreground">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-64">
-              <AppSidebar 
-                collapsed={false} 
-                onToggle={() => setMobileMenuOpen(false)} 
-              />
+              <AppSidebar collapsed={false} onToggle={() => setMobileMenuOpen(false)} />
             </SheetContent>
           </Sheet>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <FileText className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-semibold">SignFlow</span>
+            <img src={dec5Logo} alt="Logo" className="h-7 w-auto object-contain" />
+            <span className="font-semibold text-sidebar-foreground">tuFirmaOK</span>
           </div>
         </header>
         
-        <main className="min-h-screen pt-14">
+        <main className="min-h-screen pt-14 flex-1">
           <div className="p-4">
             <Outlet />
           </div>
         </main>
+
+        {/* Footer */}
+        <footer className="border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background">
+          <span>Powered by</span>
+          <img src={eoneLogo} alt="E-One SpA" className="h-5 w-auto object-contain" />
+          <span className="font-medium">E-One SpA</span>
+        </footer>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <AppSidebar 
         collapsed={sidebarCollapsed} 
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
@@ -57,7 +59,7 @@ export function MainLayout() {
       
       <main
         className={cn(
-          'min-h-screen transition-all duration-300 ease-in-out',
+          'min-h-screen transition-all duration-300 ease-in-out flex-1',
           sidebarCollapsed ? 'ml-16' : 'ml-64'
         )}
       >
@@ -65,6 +67,16 @@ export function MainLayout() {
           <Outlet />
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className={cn(
+        'border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background transition-all duration-300',
+        sidebarCollapsed ? 'ml-16' : 'ml-64'
+      )}>
+        <span>Powered by</span>
+        <img src={eoneLogo} alt="E-One SpA" className="h-5 w-auto object-contain" />
+        <span className="font-medium">E-One SpA</span>
+      </footer>
     </div>
   );
 }

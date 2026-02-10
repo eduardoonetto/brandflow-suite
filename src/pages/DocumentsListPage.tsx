@@ -5,6 +5,7 @@ import { useInstitution } from '@/context/InstitutionContext';
 import { DocumentSignatureCard } from '@/components/documents/DocumentSignatureCard';
 import { PDFViewerModal } from '@/components/documents/PDFViewerModal';
 import { SignatureModal } from '@/components/signature/SignatureModal';
+import { RejectDocumentModal } from '@/components/documents/RejectDocumentModal';
 import { CreateDocumentModal } from '@/components/documents/CreateDocumentModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,30 +49,26 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
   const [activeTab, setActiveTab] = useState<DocumentTab>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Sync activeTab with initialTab when route changes
+  React.useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const trashedDocuments = allDocuments.filter(d => d.status === 'trashed');
 
   const getDocumentsForTab = (): Document[] => {
     let docs: Document[] = [];
     switch (activeTab) {
-      case 'pending':
-        docs = pendingDocuments;
-        break;
-      case 'in-progress':
-        docs = inProgressDocuments;
-        break;
-      case 'signed':
-        docs = signedDocuments;
-        break;
-      case 'rejected':
-        docs = rejectedDocuments;
-        break;
-      case 'trashed':
-        docs = trashedDocuments;
-        break;
+      case 'pending': docs = pendingDocuments; break;
+      case 'in-progress': docs = inProgressDocuments; break;
+      case 'signed': docs = signedDocuments; break;
+      case 'rejected': docs = rejectedDocuments; break;
+      case 'trashed': docs = trashedDocuments; break;
     }
 
     if (searchQuery) {
@@ -91,6 +88,11 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
     setSelectedDocument(doc);
     setShowSignatureModal(true);
   };
+
+  const handleReject = (doc: Document) => {
+    setSelectedDocument(doc);
+    setShowRejectModal(true);
+  };
   
   const handleView = (doc: Document) => {
     setSelectedDocument(doc);
@@ -102,6 +104,14 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
       updateDocument(selectedDocument.id, { status: 'signed' });
     }
     setShowSignatureModal(false);
+    setSelectedDocument(null);
+  };
+
+  const handleRejectConfirm = (reason: string) => {
+    if (selectedDocument) {
+      updateDocument(selectedDocument.id, { status: 'rejected' });
+    }
+    setShowRejectModal(false);
     setSelectedDocument(null);
   };
 
@@ -135,7 +145,7 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
         )}
       </div>
 
-      {/* Search and filters */}
+      {/* Search */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -146,10 +156,6 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
             className="pl-10"
           />
         </div>
-        <Button variant="outline">
-          <Filter className="h-4 w-4 mr-2" />
-          Filtros
-        </Button>
       </div>
 
       {/* Status Cards */}
@@ -226,7 +232,9 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
                     key={doc.id}
                     document={doc}
                     showSignButton={activeTab === 'pending'}
+                    showRejectButton={activeTab === 'pending'}
                     onSign={() => handleSign(doc)}
+                    onReject={() => handleReject(doc)}
                     onView={() => handleView(doc)}
                   />
                 ))}
@@ -244,13 +252,25 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
         documentTitle={selectedDocument?.title || ''}
       />
 
+      {/* Reject Modal */}
+      <RejectDocumentModal
+        open={showRejectModal}
+        onOpenChange={setShowRejectModal}
+        onConfirm={handleRejectConfirm}
+        documentTitle={selectedDocument?.title || ''}
+      />
+
       <PDFViewerModal
         open={showPDFViewer}
         onOpenChange={setShowPDFViewer}
         document={selectedDocument}
         onSign={() => {
           setShowPDFViewer(false);
-          setShowSignatureModal(true);
+          if (selectedDocument) handleSign(selectedDocument);
+        }}
+        onReject={(reason) => {
+          setShowPDFViewer(false);
+          handleRejectConfirm(reason);
         }}
       />
 

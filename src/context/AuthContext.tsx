@@ -13,7 +13,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-// Mock data for development
 const mockInstitution: Institution = {
   id: 'inst-1',
   name: 'Acme Corporation',
@@ -49,13 +48,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
-    
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Mock login - in production this would validate against backend
     if (email && password) {
-      setUser({ ...mockUser, email });
+      // If admin@admin.cl, set as superadmin
+      const isSuperAdmin = email === 'admin@admin.cl';
+      setUser({ 
+        ...mockUser, 
+        email,
+        role: isSuperAdmin ? 'superadmin' : 'admin',
+      });
       setInstitution(mockInstitution);
     }
     
@@ -69,15 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider 
-      value={{ 
-        user, 
-        institution, 
-        isAuthenticated: !!user, 
-        isLoading,
-        login, 
-        logout,
-        setInstitution 
-      }}
+      value={{ user, institution, isAuthenticated: !!user, isLoading, login, logout, setInstitution }}
     >
       {children}
     </AuthContext.Provider>
