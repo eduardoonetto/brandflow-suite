@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import dec5Logo from '@/assets/dec5-logo.png';
 import eoneLogo from '@/assets/eone-logo.png';
 
 export function MainLayout() {
@@ -28,10 +27,6 @@ export function MainLayout() {
               <AppSidebar collapsed={false} onToggle={() => setMobileMenuOpen(false)} />
             </SheetContent>
           </Sheet>
-          <div className="flex items-center gap-2">
-            <img src={dec5Logo} alt="Logo" className="h-7 w-auto object-contain" />
-            <span className="font-semibold text-sidebar-foreground">tuFirmaOK</span>
-          </div>
         </header>
         
         <main className="min-h-screen pt-14 flex-1">
@@ -40,7 +35,6 @@ export function MainLayout() {
           </div>
         </main>
 
-        {/* Footer */}
         <footer className="border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background">
           <span>Powered by</span>
           <img src={eoneLogo} alt="E-One SpA" className="h-5 w-auto object-contain" />
@@ -68,7 +62,6 @@ export function MainLayout() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className={cn(
         'border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background transition-all duration-300',
         sidebarCollapsed ? 'ml-16' : 'ml-64'

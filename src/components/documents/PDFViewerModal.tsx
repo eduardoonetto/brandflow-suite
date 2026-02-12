@@ -4,19 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { 
-  Download, 
-  FileText,
-  CheckCircle,
-  Clock,
-  XCircle,
-  PenLine,
-  Eye
+  Download, FileText, CheckCircle, Clock, XCircle, PenLine, Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -25,7 +16,8 @@ import { AuditTimeline } from '@/components/audit/AuditTimeline';
 import { AuditEvent } from '@/types';
 import { RejectDocumentModal } from './RejectDocumentModal';
 
-const SAMPLE_PDF_URL = 'https://culinaria.group/site/media/ARCHIVO-PDF-DE-PRUEBA.pdf';
+// Use local PDF file
+const SAMPLE_PDF_URL = '/sample.pdf';
 
 interface PDFViewerModalProps {
   open: boolean;
@@ -46,61 +38,52 @@ export function PDFViewerModal({ open, onOpenChange, document: doc, onSign, onRe
 
   const getSignerStatusIcon = (status: string) => {
     switch (status) {
-      case 'signed':
-        return <CheckCircle className="h-4 w-4 text-success" />;
-      case 'rejected':
-        return <XCircle className="h-4 w-4 text-destructive" />;
-      default:
-        return <Clock className="h-4 w-4 text-warning" />;
+      case 'signed': return <CheckCircle className="h-4 w-4 text-success" />;
+      case 'rejected': return <XCircle className="h-4 w-4 text-destructive" />;
+      default: return <Clock className="h-4 w-4 text-warning" />;
     }
   };
 
   const showSignButton = doc.status === 'pending' && 
     doc.signers.some(s => (s.userId === 'user-1' || s.email === 'admin@acme.com') && s.status === 'pending');
 
-  // Generate audit events from document data
+  // Generate audit events
   const baseEvent: AuditEvent = {
-    id: `evt-created-${doc.id}`,
-    documentId: doc.id,
-    type: 'created' as const,
-    timestamp: doc.createdAt,
-    actorId: doc.createdBy,
-    actorEmail: 'sistema@tufirmaok.cl',
-    metadata: {},
+    id: `evt-created-${doc.id}`, documentId: doc.id, type: 'created',
+    timestamp: doc.createdAt, actorId: doc.createdBy, actorEmail: 'sistema@tufirmaok.cl', metadata: {},
   };
 
-  // Add notification events
   const notificationEvents: AuditEvent[] = doc.signers.map((signer, idx): AuditEvent => ({
-    id: `evt-notif-${signer.id}`,
-    documentId: doc.id,
-    type: 'sent',
+    id: `evt-notif-${signer.id}`, documentId: doc.id, type: 'sent',
     timestamp: new Date(new Date(doc.createdAt).getTime() + (idx + 1) * 60000),
-    actorId: 'system',
-    actorEmail: 'sistema@tufirmaok.cl',
-    metadata: {
-      recipientEmail: signer.email,
-      signerName: signer.name,
-    },
+    actorId: 'system', actorEmail: 'sistema@tufirmaok.cl',
+    metadata: { recipientEmail: signer.email, signerName: signer.name },
   }));
 
   const signerEvents: AuditEvent[] = doc.signers
     .filter(s => s.status !== 'pending')
     .map((signer): AuditEvent => ({
-      id: `evt-sign-${signer.id}`,
-      documentId: doc.id,
+      id: `evt-sign-${signer.id}`, documentId: doc.id,
       type: signer.status === 'signed' ? 'signed' : 'rejected',
       timestamp: signer.signedAt || new Date(),
-      actorId: signer.userId || signer.id,
-      actorEmail: signer.email,
+      actorId: signer.userId || signer.id, actorEmail: signer.email,
       metadata: {
-        signerName: signer.name,
-        signatureMethod: signer.signatureType,
+        signerName: signer.name, signatureMethod: signer.signatureType,
         ...(signer.rejectionReason && { rejectionReason: signer.rejectionReason }),
       },
     }));
 
-  const auditEvents: AuditEvent[] = [baseEvent, ...notificationEvents, ...signerEvents]
+  const auditEvents = [baseEvent, ...notificationEvents, ...signerEvents]
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  const getWatermarkText = () => {
+    if (doc.status === 'rejected') return 'RECHAZADO';
+    if (doc.status === 'draft') return 'BORRADOR';
+    if (doc.status === 'pending') return 'PENDIENTE';
+    return null;
+  };
+
+  const watermark = getWatermarkText();
 
   const handleDownloadPDF = () => {
     const link = document.createElement('a');
@@ -136,17 +119,19 @@ export function PDFViewerModal({ open, onOpenChange, document: doc, onSign, onRe
                 className="w-full h-full min-h-[600px] border-0"
                 title="PDF Viewer"
               />
-              {/* Watermark for non-signed docs */}
-              {doc.status !== 'signed' && (
+              {watermark && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-7xl font-bold text-muted-foreground/15 rotate-[-30deg] select-none">
-                    {doc.status === 'rejected' ? 'RECHAZADO' : 'BORRADOR'}
+                  <span className={cn(
+                    'text-7xl font-bold rotate-[-30deg] select-none',
+                    doc.status === 'rejected' ? 'text-destructive/20' : 'text-muted-foreground/15'
+                  )}>
+                    {watermark}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Sidebar with info */}
+            {/* Sidebar */}
             <div className="w-72 shrink-0 space-y-4 overflow-y-auto">
               <div className="bg-muted/50 rounded-lg p-4">
                 <h4 className="font-medium mb-3">Información</h4>
@@ -197,7 +182,6 @@ export function PDFViewerModal({ open, onOpenChange, document: doc, onSign, onRe
                 </div>
               </div>
 
-              {/* Audit Trail */}
               <div className="bg-muted/50 rounded-lg p-4">
                 <h4 className="font-medium mb-3">Traza del Documento</h4>
                 <AuditTimeline events={auditEvents} compact />
@@ -215,11 +199,7 @@ export function PDFViewerModal({ open, onOpenChange, document: doc, onSign, onRe
                   </Button>
                 )}
                 {showSignButton && onReject && (
-                  <Button 
-                    variant="destructive" 
-                    className="w-full" 
-                    onClick={() => setShowRejectModal(true)}
-                  >
+                  <Button variant="destructive" className="w-full" onClick={() => setShowRejectModal(true)}>
                     <XCircle className="h-4 w-4 mr-2" />
                     Rechazar Documento
                   </Button>

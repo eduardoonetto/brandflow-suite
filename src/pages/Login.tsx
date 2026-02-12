@@ -121,7 +121,7 @@ export default function Login() {
           
           <div className="max-w-md">
             <h1 className="text-4xl font-bold text-white mb-4 leading-tight">
-              tuFirmaOK.cl
+              Firma Digital Empresarial
             </h1>
             <p className="text-2xl text-white/90 mb-2">
               Gestiona y firma documentos de manera segura
@@ -167,7 +167,7 @@ export default function Login() {
               alt="DEC5 Logo" 
               className="h-12 w-auto object-contain"
             />
-            <span className="text-xl font-bold text-primary">tuFirmaOK.cl</span>
+            <span className="text-xl font-bold text-primary">Firma Digital</span>
           </div>
 
           <div className="mb-8">
