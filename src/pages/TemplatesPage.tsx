@@ -3,34 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useDocuments } from '@/context/DocumentContext';
 import { useInstitution } from '@/context/InstitutionContext';
 import { CreateDocumentModal } from '@/components/documents/CreateDocumentModal';
-import { SignerConfigModal } from '@/components/documents/SignerConfigModal';
-import { DocumentTemplate, DocumentSigner } from '@/types';
+import { DocumentTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
-  Plus, 
-  Search, 
-  FileText, 
-  MoreVertical,
-  Edit,
-  Copy,
-  Trash2,
-  Eye,
-  Send
+  Plus, Search, FileText, MoreVertical, Edit, Copy, Trash2, Eye, Send, Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -38,13 +22,11 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
-  const { templates, deleteTemplate, addDocument } = useDocuments();
-  const { isPersonalInstitution, currentInstitution } = useInstitution();
+  const { templates, deleteTemplate } = useDocuments();
+  const { isPersonalInstitution } = useInstitution();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showSignerModal, setShowSignerModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
 
   if (isPersonalInstitution) {
     return (
@@ -78,43 +60,45 @@ export default function TemplatesPage() {
   }, {} as Record<string, DocumentTemplate[]>);
 
   const handleSendToSign = (template: DocumentTemplate) => {
-    setSelectedTemplate(template);
-    setShowSignerModal(true);
-  };
-
-  const handleSignersConfirmed = (signers: Omit<DocumentSigner, 'id' | 'documentId' | 'status'>[]) => {
-    if (!selectedTemplate) return;
-    addDocument({
-      templateId: selectedTemplate.id,
-      title: selectedTemplate.title,
-      description: selectedTemplate.description,
-      content: selectedTemplate.content,
-      status: 'pending',
-      tags: selectedTemplate.tags,
-      institutionId: currentInstitution?.id || '',
-      createdBy: 'user-1',
-      variables: selectedTemplate.variables,
-      signers: signers.map((s, idx) => ({
-        ...s,
-        id: `signer-${Date.now()}-${idx}`,
-        documentId: '',
-        status: 'pending' as const,
-      })),
-      signatures: [],
-    });
-    setShowSignerModal(false);
-    setSelectedTemplate(null);
-    toast({
-      title: 'Documento creado',
-      description: 'El documento ha sido enviado a los firmantes',
-    });
-    navigate('/documents/pending');
+    // Navigate to editor to fill variables and configure signers
+    navigate(`/documents/new?templateId=${template.id}`);
   };
 
   const handleDeleteTemplate = (id: string) => {
     if (confirm('¿Está seguro de eliminar esta plantilla?')) {
       deleteTemplate(id);
     }
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['ID', 'Título', 'Descripción', 'Tipo', 'Categoría', 'Variables', 'Tags', 'Contenido', 'Fecha Creación', 'Fecha Actualización'];
+    const rows = templates.map(t => [
+      t.id,
+      t.title,
+      t.description,
+      t.templateType,
+      t.category,
+      t.variables.map(v => `${v.key}:${v.type}:${v.label}:${v.required}`).join('|'),
+      t.tags.map(tag => `${tag.name}:${tag.color}`).join('|'),
+      t.content.replace(/"/g, '""'),
+      format(t.createdAt, 'yyyy-MM-dd HH:mm:ss'),
+      format(t.updatedAt, 'yyyy-MM-dd HH:mm:ss'),
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `plantillas_export_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toast({ title: 'Exportación completada', description: `${templates.length} plantillas exportadas a CSV` });
   };
 
   return (
@@ -126,13 +110,19 @@ export default function TemplatesPage() {
             Crea y administra plantillas reutilizables para tus documentos
           </p>
         </div>
-        <Button 
-          onClick={() => setShowCreateModal(true)}
-          className="bg-gradient-primary hover:opacity-90"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Plantilla
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            className="bg-gradient-primary hover:opacity-90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Plantilla
+          </Button>
+        </div>
       </div>
 
       <div className="relative w-full max-w-md">
@@ -239,12 +229,6 @@ export default function TemplatesPage() {
         open={showCreateModal} 
         onOpenChange={setShowCreateModal}
         mode="template"
-      />
-
-      <SignerConfigModal
-        open={showSignerModal}
-        onOpenChange={setShowSignerModal}
-        onConfirm={handleSignersConfirmed}
       />
     </div>
   );

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useDocuments } from '@/context/DocumentContext';
 import { useDocumentVariables } from '@/hooks/useDocumentVariables';
 import { VariablePanel } from '@/components/editor/VariablePanel';
@@ -8,9 +8,9 @@ import { SignatureModal } from '@/components/signature/SignatureModal';
 import { AuditTimeline } from '@/components/audit/AuditTimeline';
 import { RichTextEditor } from '@/components/editor/RichTextEditor';
 import { TagCreator } from '@/components/documents/TagCreator';
+import { SignerConfigModal } from '@/components/documents/SignerConfigModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -34,10 +34,13 @@ import {
   Edit3,
   PenLine,
   History,
-  X
+  X,
+  Users,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AuditEvent, DocumentStatus } from '@/types';
+import { AuditEvent, DocumentStatus, DocumentSigner } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 // Mock audit events
 const mockAuditEvents: AuditEvent[] = [
@@ -59,47 +62,74 @@ const mockAuditEvents: AuditEvent[] = [
     actorEmail: 'admin@acme.com',
     metadata: { recipientEmail: 'maria@example.com' },
   },
-  {
-    id: 'evt-3',
-    documentId: 'doc-1',
-    type: 'delivered',
-    timestamp: new Date(Date.now() - 86400000 * 2 + 3600000),
-    actorId: 'system',
-    actorEmail: 'sistema',
-    metadata: {},
-  },
-  {
-    id: 'evt-4',
-    documentId: 'doc-1',
-    type: 'opened',
-    timestamp: new Date(Date.now() - 86400000),
-    actorId: 'user-2',
-    actorEmail: 'maria@example.com',
-    metadata: {
-      ipAddress: '190.45.23.112',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      location: 'Santiago, Chile',
-    },
-  },
 ];
 
 export default function DocumentEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { documents, tags, updateDocument, addDocument, addTag } = useDocuments();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  const { documents, templates, tags, updateDocument, addDocument, addTag, updateTemplate } = useDocuments();
+  
+  // Detect if we're editing a template
+  const isTemplatePath = location.pathname.startsWith('/templates');
+  const templateIdFromQuery = searchParams.get('templateId');
   
   const isNew = id === 'new';
-  const existingDoc = documents.find(d => d.id === id);
   
-  const [title, setTitle] = useState(existingDoc?.title || '');
-  const [content, setContent] = useState(existingDoc?.content || '');
-  const [status, setStatus] = useState<DocumentStatus>(existingDoc?.status || 'draft');
-  const [selectedTags, setSelectedTags] = useState<string[]>(
-    existingDoc?.tags.map(t => t.id) || []
-  );
+  // Find the entity - could be a document or a template
+  const existingDoc = documents.find(d => d.id === id);
+  const existingTemplate = templates.find(t => t.id === id);
+  const sourceTemplate = templateIdFromQuery ? templates.find(t => t.id === templateIdFromQuery) : null;
+  
+  // Determine if this is a PDF-only document (no template editor needed)
+  const isPdfMode = existingTemplate?.templateType === 'upload' || existingDoc?.templateId === undefined && !existingTemplate;
+  
+  // Use template data when editing a template
+  const entityData = isTemplatePath ? existingTemplate : existingDoc;
+  
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [content, setContent] = useState('');
+  const [status, setStatus] = useState<DocumentStatus>('draft');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('edit');
   const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [useRichEditor, setUseRichEditor] = useState(true);
+  const [showSignerModal, setShowSignerModal] = useState(false);
+  const [configuredSigners, setConfiguredSigners] = useState<Omit<DocumentSigner, 'id' | 'documentId' | 'status'>[]>([]);
+
+  // Initialize state from entity data
+  useEffect(() => {
+    if (sourceTemplate) {
+      setTitle(sourceTemplate.title);
+      setDescription(sourceTemplate.description);
+      setContent(sourceTemplate.content);
+      setSelectedTags(sourceTemplate.tags.map(t => t.id));
+    } else if (entityData) {
+      setTitle(entityData.title);
+      setDescription('description' in entityData ? entityData.description || '' : '');
+      setContent(entityData.content);
+      setSelectedTags(entityData.tags?.map(t => t.id) || []);
+      if ('status' in entityData) {
+        setStatus(entityData.status);
+      }
+      if ('signers' in entityData && entityData.signers) {
+        setConfiguredSigners(entityData.signers.map(s => ({
+          email: s.email,
+          name: s.name,
+          rut: s.rut,
+          role: s.role,
+          roleId: s.roleId,
+          userId: s.userId,
+          signerType: s.signerType,
+          signatureType: s.signatureType,
+          order: s.order,
+          notificationType: s.notificationType,
+        })));
+      }
+    }
+  }, [entityData, sourceTemplate]);
 
   const { 
     variables, 
@@ -109,43 +139,58 @@ export default function DocumentEditor() {
     getCompletionPercentage 
   } = useDocumentVariables();
 
-  // Parse content for variables when content changes
   useEffect(() => {
-    // Strip HTML tags for variable parsing
     const plainContent = content.replace(/<[^>]+>/g, '');
     parseContent(plainContent);
   }, [content, parseContent]);
 
-  // Load existing document values
   useEffect(() => {
-    if (existingDoc) {
+    if (entityData && 'variables' in entityData) {
       const existingValues: Record<string, string> = {};
-      existingDoc.variables.forEach(v => {
+      entityData.variables.forEach(v => {
         if (v.value) existingValues[v.key] = v.value;
       });
       Object.entries(existingValues).forEach(([key, value]) => {
         setValue(key, value);
       });
     }
-  }, [existingDoc, setValue]);
+  }, [entityData, setValue]);
 
   const handleSave = () => {
     const docTags = tags.filter(t => selectedTags.includes(t.id));
     
-    if (isNew) {
-      addDocument({
+    if (isTemplatePath && existingTemplate) {
+      updateTemplate(existingTemplate.id, {
         title,
+        description,
         content,
-        status,
         tags: docTags,
-        institutionId: 'inst-1',
+        variables: variables.map(v => ({ ...v, value: values[v.key] })),
+      });
+      toast({ title: 'Plantilla guardada', description: 'Los cambios han sido guardados' });
+    } else if (sourceTemplate || (isNew && !isTemplatePath)) {
+      // Creating a new document from template
+      addDocument({
+        templateId: sourceTemplate?.id,
+        title,
+        description,
+        content,
+        status: 'pending',
+        tags: docTags,
+        institutionId: 'inst-acme',
         createdBy: 'user-1',
         variables: variables.map(v => ({ ...v, value: values[v.key] })),
-        signers: [],
+        signers: configuredSigners.map((s, idx) => ({
+          ...s,
+          id: `signer-${Date.now()}-${idx}`,
+          documentId: '',
+          status: 'pending' as const,
+        })),
         signatures: [],
       });
-      navigate('/documents');
-    } else {
+      toast({ title: 'Documento creado', description: 'El documento ha sido enviado a los firmantes' });
+      navigate('/documents/pending');
+    } else if (existingDoc) {
       updateDocument(id!, {
         title,
         content,
@@ -153,7 +198,21 @@ export default function DocumentEditor() {
         tags: docTags,
         variables: variables.map(v => ({ ...v, value: values[v.key] })),
       });
+      toast({ title: 'Documento guardado' });
     }
+  };
+
+  const handleSendToSign = () => {
+    if (configuredSigners.length === 0) {
+      setShowSignerModal(true);
+      return;
+    }
+    handleSave();
+  };
+
+  const handleSignersConfirmed = (signers: Omit<DocumentSigner, 'id' | 'documentId' | 'status'>[]) => {
+    setConfiguredSigners(signers);
+    setShowSignerModal(false);
   };
 
   const handleSignatureComplete = (data: any) => {
@@ -174,22 +233,18 @@ export default function DocumentEditor() {
     setSelectedTags(prev => [...prev, newTag.id]);
   };
 
-  // Show history tab only for existing documents with signers
   const showHistoryTab = !isNew && existingDoc?.signers?.length > 0;
+  const showSendButton = sourceTemplate || (isTemplatePath && existingTemplate);
+  const showPdfViewer = isPdfMode && existingTemplate?.pdfUrl;
 
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col animate-fade-in">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b mb-4 gap-4">
         <div className="flex items-center gap-4 min-w-0">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate(-1)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          
           <div className="min-w-0 flex-1">
             <Input
               value={title}
@@ -205,7 +260,8 @@ export default function DocumentEditor() {
                 status === 'signed' ? 'status-signed' :
                 'status-rejected'
               )}>
-                {status === 'draft' ? 'Borrador' :
+                {isTemplatePath ? 'Plantilla' :
+                 status === 'draft' ? 'Borrador' :
                  status === 'pending' ? 'Pendiente' :
                  status === 'signed' ? 'Firmado' :
                  'Rechazado'}
@@ -235,47 +291,28 @@ export default function DocumentEditor() {
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
-          <Select value={status} onValueChange={(v) => setStatus(v as DocumentStatus)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">Borrador</SelectItem>
-              <SelectItem value="pending">Pendiente</SelectItem>
-              <SelectItem value="signed">Firmado</SelectItem>
-              <SelectItem value="rejected">Rechazado</SelectItem>
-            </SelectContent>
-          </Select>
+          <Button variant="outline" onClick={handleSave}>
+            <Save className="h-4 w-4 mr-2" />
+            Guardar
+          </Button>
           
-          {!isNew && status === 'pending' && (
+          {showSendButton && (
+            <Button
+              className="bg-gradient-primary hover:opacity-90"
+              onClick={handleSendToSign}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Enviar a Firmar
+            </Button>
+          )}
+          
+          {!isNew && status === 'pending' && !isTemplatePath && (
             <Button
               variant="outline"
               onClick={() => setShowSignatureModal(true)}
             >
               <PenLine className="h-4 w-4 mr-2" />
               Firmar
-            </Button>
-          )}
-          
-          <Button
-            variant="outline"
-            onClick={handleSave}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Guardar
-          </Button>
-          
-          {status === 'draft' && (
-            <Button
-              className="bg-gradient-primary hover:opacity-90"
-              onClick={() => {
-                handleSave();
-                setStatus('pending');
-                updateDocument(id!, { status: 'pending' });
-              }}
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Enviar a Firmar
             </Button>
           )}
         </div>
@@ -288,13 +325,19 @@ export default function DocumentEditor() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <TabsList className="w-fit">
-                <TabsTrigger value="edit" className="gap-2">
-                  <Edit3 className="h-4 w-4" />
-                  Editar
-                </TabsTrigger>
+                {!showPdfViewer && (
+                  <TabsTrigger value="edit" className="gap-2">
+                    <Edit3 className="h-4 w-4" />
+                    Editar
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="preview" className="gap-2">
                   <Eye className="h-4 w-4" />
                   Vista Previa
+                </TabsTrigger>
+                <TabsTrigger value="signers" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Firmantes ({configuredSigners.length})
                 </TabsTrigger>
                 {showHistoryTab && (
                   <TabsTrigger value="history" className="gap-2">
@@ -312,48 +355,73 @@ export default function DocumentEditor() {
               />
             </div>
             
-            <TabsContent value="edit" className="flex-1 m-0">
-              <div className="h-full flex flex-col gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Contenido del documento
-                    </Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setUseRichEditor(!useRichEditor)}
-                      className="h-7 text-xs"
-                    >
-                      {useRichEditor ? 'Modo código' : 'Modo visual'}
-                    </Button>
-                  </div>
-                  
-                  {useRichEditor ? (
+            {!showPdfViewer && (
+              <TabsContent value="edit" className="flex-1 m-0">
+                <div className="h-full flex flex-col gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Contenido del documento
+                      </Label>
+                    </div>
                     <RichTextEditor
                       content={content}
                       onChange={setContent}
                       placeholder="Escriba el contenido del documento aquí. Use {{variable}} para crear campos editables."
                     />
-                  ) : (
-                    <Textarea
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder="Escriba el contenido del documento aquí. Use {{variable}} para crear campos editables."
-                      className="h-full min-h-[400px] resize-none font-mono text-sm"
-                    />
-                  )}
+                  </div>
                 </div>
-              </div>
-            </TabsContent>
+              </TabsContent>
+            )}
             
             <TabsContent value="preview" className="flex-1 m-0">
-              <DocumentPreview
-                content={content}
-                variables={values}
-                status={status}
-                title={title || 'Sin título'}
-              />
+              {showPdfViewer ? (
+                <div className="h-full bg-muted rounded-lg overflow-hidden">
+                  <iframe
+                    src={`${existingTemplate?.pdfUrl || '/sample.pdf'}#toolbar=1&navpanes=0`}
+                    className="w-full h-full min-h-[500px] border-0"
+                    title="PDF Viewer"
+                  />
+                </div>
+              ) : (
+                <DocumentPreview
+                  content={content}
+                  variables={values}
+                  status={status}
+                  title={title || 'Sin título'}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="signers" className="flex-1 m-0">
+              <div className="space-y-4">
+                <div className="text-center py-6">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                  <h4 className="font-medium">Firmantes del Documento</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {isTemplatePath ? 'Configura los firmantes predeterminados de esta plantilla' : 'Define quién debe firmar este documento'}
+                  </p>
+                </div>
+
+                {configuredSigners.length > 0 && (
+                  <div className="border rounded-lg p-4 space-y-2">
+                    <p className="text-sm font-medium">{configuredSigners.length} firmante(s) configurado(s)</p>
+                    {configuredSigners.map((s, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground p-2 bg-muted/50 rounded">
+                        <span className="font-mono bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">{idx + 1}</span>
+                        <span className="font-medium text-foreground">{s.name || s.roleId || 'Sin nombre'}</span>
+                        <span className="text-xs">({s.signerType === 'signer' ? 'Firmante' : 'Visador'})</span>
+                        {s.email && <span className="text-xs ml-auto">{s.email}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <Button onClick={() => setShowSignerModal(true)} className="w-full" variant={configuredSigners.length > 0 ? 'outline' : 'default'}>
+                  <Users className="h-4 w-4 mr-2" />
+                  {configuredSigners.length > 0 ? 'Modificar Firmantes' : 'Configurar Firmantes'}
+                </Button>
+              </div>
             </TabsContent>
             
             {showHistoryTab && (
@@ -364,23 +432,30 @@ export default function DocumentEditor() {
           </Tabs>
         </div>
 
-        {/* Variable panel */}
-        <div className="w-80 shrink-0">
-          <VariablePanel
-            variables={variables}
-            values={values}
-            onValueChange={setValue}
-            completionPercentage={getCompletionPercentage()}
-          />
-        </div>
+        {/* Variable panel - only show for template-type docs */}
+        {!showPdfViewer && variables.length > 0 && (
+          <div className="w-80 shrink-0">
+            <VariablePanel
+              variables={variables}
+              values={values}
+              onValueChange={setValue}
+              completionPercentage={getCompletionPercentage()}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Signature Modal */}
       <SignatureModal
         open={showSignatureModal}
         onOpenChange={setShowSignatureModal}
         onComplete={handleSignatureComplete}
         documentTitle={title}
+      />
+
+      <SignerConfigModal
+        open={showSignerModal}
+        onOpenChange={setShowSignerModal}
+        onConfirm={handleSignersConfirmed}
       />
     </div>
   );

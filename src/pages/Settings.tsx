@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useInstitution } from '@/context/InstitutionContext';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
@@ -24,11 +25,14 @@ const colorPresets = [
   { name: 'Verde', value: '142 71% 45%' },
   { name: 'Naranja', value: '25 95% 53%' },
   { name: 'Rojo', value: '0 84% 60%' },
+  { name: 'Verde Oscuro', value: '152 55% 28%' },
+  { name: 'Índigo', value: '240 60% 50%' },
 ];
 
 export default function Settings() {
   const { user, institution } = useAuth();
   const { theme, setTheme, sidebarThemes, currentSidebarTheme, setSidebarTheme } = useTheme();
+  const { isPersonalInstitution, currentInstitution } = useInstitution();
   const { toast } = useToast();
   const [isSaved, setIsSaved] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
@@ -59,7 +63,7 @@ export default function Settings() {
 
   const handleSave = () => {
     setIsSaved(true);
-    toast({ title: 'Cambios guardados', description: 'Tu configuración ha sido actualizada' });
+    toast({ title: 'Cambios guardados', description: 'La configuración ha sido actualizada' });
     setTimeout(() => setIsSaved(false), 2000);
   };
 
@@ -71,7 +75,11 @@ export default function Settings() {
     <div className="space-y-6 animate-fade-in max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold">Configuración</h1>
-        <p className="text-muted-foreground">Administre su perfil y preferencias de la plataforma</p>
+        <p className="text-muted-foreground">
+          {isPersonalInstitution 
+            ? 'Administre su perfil y preferencias personales' 
+            : `Configuración de ${currentInstitution?.name}`}
+        </p>
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
@@ -115,7 +123,7 @@ export default function Settings() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Rol</Label><Input value={user?.role === 'admin' ? 'Administrador' : user?.role === 'superadmin' ? 'Super Admin' : 'Usuario'} disabled className="bg-muted" /></div>
-                <div className="space-y-2"><Label>Institución</Label><Input value={institution?.name || ''} disabled className="bg-muted" /></div>
+                <div className="space-y-2"><Label>Institución Actual</Label><Input value={currentInstitution?.name || ''} disabled className="bg-muted" /></div>
               </div>
             </CardContent>
           </Card>
@@ -144,11 +152,18 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Appearance Tab */}
+        {/* Appearance Tab - Institution theming */}
         <TabsContent value="appearance">
           <div className="space-y-6">
             <Card>
-              <CardHeader><CardTitle>Color Principal</CardTitle><CardDescription>Ajuste el color primario de la plataforma</CardDescription></CardHeader>
+              <CardHeader>
+                <CardTitle>Color Principal de la Institución</CardTitle>
+                <CardDescription>
+                  {isPersonalInstitution 
+                    ? 'Personaliza el color de tu institución personal'
+                    : `Configuración visual de ${currentInstitution?.name}`}
+                </CardDescription>
+              </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-3">
                   <Label>Color principal</Label>
@@ -195,10 +210,10 @@ export default function Settings() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Monitor className="h-5 w-5" />Tema del Menú Lateral</CardTitle>
-                <CardDescription>Personaliza el color del sidebar</CardDescription>
+                <CardDescription>Personaliza el color del sidebar para esta institución</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {sidebarThemes.map((st) => (
                     <button
                       key={st.name}

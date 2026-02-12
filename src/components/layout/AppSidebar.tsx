@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FileText, 
@@ -18,7 +18,6 @@ import {
   FileClock,
   Trash2,
   Shield,
-  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -30,19 +29,21 @@ import {
   TooltipContent,
   TooltipTrigger 
 } from '@/components/ui/tooltip';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { InstitutionSelector } from './InstitutionSelector';
-import { CreateDocumentModal } from '@/components/documents/CreateDocumentModal';
 import dec5Logo from '@/assets/dec5-logo.png';
+import codelcoLogo from '@/assets/codelco-logo.png';
+import falabellaLogo from '@/assets/falabella-logo.png';
 
 interface AppSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
+
+const institutionLogos: Record<string, string> = {
+  'inst-personal': dec5Logo,
+  'inst-acme': codelcoLogo,
+  'inst-tech': falabellaLogo,
+};
 
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const { user, logout } = useAuth();
@@ -50,14 +51,13 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const { isPersonalInstitution, currentInstitution } = useInstitution();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [adminOpen, setAdminOpen] = useState(true);
+
+  const currentLogo = institutionLogos[currentInstitution?.id || ''] || dec5Logo;
 
   const mainNavItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   ];
 
-  // Only show templates for organizations
   if (!isPersonalInstitution) {
     mainNavItems.push({ icon: FileStack, label: 'Plantillas', path: '/templates' });
   }
@@ -69,17 +69,14 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
     { icon: XCircle, label: 'Rechazados', path: '/documents/rejected' },
   ];
 
-  // Add trash only for organizations
   if (!isPersonalInstitution) {
     documentNavItems.push({ icon: Trash2, label: 'Papelera', path: '/documents/trashed' });
   }
 
-  // Super admin menu (institutions)
   const superAdminNavItems = user?.role === 'superadmin' ? [
     { icon: Building2, label: 'Instituciones', path: '/admin/institutions' },
   ] : [];
 
-  // Admin items (different based on institution type)
   const adminNavItems = isPersonalInstitution 
     ? [{ icon: Settings, label: 'Configuración', path: '/settings' }]
     : [
@@ -119,9 +116,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       return (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>{content}</TooltipTrigger>
-          <TooltipContent side="right" className="font-medium">
-            {label}
-          </TooltipContent>
+          <TooltipContent side="right" className="font-medium">{label}</TooltipContent>
         </Tooltip>
       );
     }
@@ -130,7 +125,6 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   };
 
   return (
-    <>
     <aside
       className={cn(
         'fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border',
@@ -146,26 +140,19 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         {!collapsed && (
           <div className="flex items-center gap-2">
             <img 
-              src={currentInstitution?.logoUrl || dec5Logo} 
+              src={currentLogo} 
               alt="Logo" 
-              className="h-8 w-auto object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = dec5Logo;
-              }}
+              className="h-8 w-auto object-contain max-w-[120px]"
+              onError={(e) => { (e.target as HTMLImageElement).src = dec5Logo; }}
             />
-            <span className="font-semibold text-sidebar-foreground">
-              tuFirmaOK
-            </span>
           </div>
         )}
         {collapsed && (
           <img 
-            src={currentInstitution?.logoUrl || dec5Logo} 
+            src={currentLogo}
             alt="Logo" 
             className="h-8 w-8 object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = dec5Logo;
-            }}
+            onError={(e) => { (e.target as HTMLImageElement).src = dec5Logo; }}
           />
         )}
       </div>
@@ -177,11 +164,11 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         </div>
       )}
 
-      {/* New Document Button */}
+      {/* New Document Button → redirects to /templates */}
       {!isPersonalInstitution && (
         <div className={cn('p-3', collapsed && 'px-2')}>
           <Button 
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => navigate('/templates')}
             className={cn(
               'w-full bg-gradient-primary hover:opacity-90 transition-opacity',
               collapsed && 'px-0'
@@ -201,12 +188,9 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           ))}
         </div>
 
-        {/* Documents section */}
         {!collapsed && (
           <div className="mt-4 mb-2 px-3">
-            <span className="text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-              Documentos
-            </span>
+            <span className="text-xs font-medium text-sidebar-muted uppercase tracking-wider">Documentos</span>
           </div>
         )}
         {collapsed && <div className="my-4 border-t border-sidebar-border" />}
@@ -216,14 +200,11 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           ))}
         </div>
 
-        {/* Super Admin section (for superadmins only) */}
         {superAdminNavItems.length > 0 && (
           <>
             {!collapsed && (
               <div className="mt-6 mb-2 px-3">
-                <span className="text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                  Super Admin
-                </span>
+                <span className="text-xs font-medium text-sidebar-muted uppercase tracking-wider">Super Admin</span>
               </div>
             )}
             {collapsed && <div className="my-4 border-t border-sidebar-border" />}
@@ -235,14 +216,11 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           </>
         )}
 
-        {/* Admin section */}
         {(user?.role === 'admin' || user?.role === 'superadmin') && (
           <>
             {!collapsed && (
               <div className="mt-6 mb-2 px-3">
-                <span className="text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                  Administración
-                </span>
+                <span className="text-xs font-medium text-sidebar-muted uppercase tracking-wider">Administración</span>
               </div>
             )}
             {collapsed && <div className="my-4 border-t border-sidebar-border" />}
@@ -260,17 +238,11 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         {!collapsed && user && (
           <div className="flex items-center gap-3 px-2 py-2 mb-2">
             <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center">
-              <span className="text-sm font-medium text-sidebar-foreground">
-                {user.name.charAt(0)}
-              </span>
+              <span className="text-sm font-medium text-sidebar-foreground">{user.name.charAt(0)}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
-                {user.name}
-              </p>
-              <p className="text-xs text-sidebar-muted truncate">
-                {user.email}
-              </p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</p>
+              <p className="text-xs text-sidebar-muted truncate">{user.email}</p>
             </div>
           </div>
         )}
@@ -295,21 +267,10 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             onClick={onToggle}
             className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent shrink-0"
           >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
         </div>
       </div>
     </aside>
-
-      <CreateDocumentModal
-        open={showCreateModal}
-        onOpenChange={setShowCreateModal}
-        mode="document"
-      />
-    </>
   );
 }
