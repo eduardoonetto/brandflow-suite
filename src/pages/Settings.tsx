@@ -224,10 +224,20 @@ export default function Settings() {
                       )}
                     >
                       <div 
-                        className="h-16 rounded-lg mb-2 flex items-end p-2"
+                        className="h-16 rounded-lg mb-2 flex items-end p-2 relative overflow-hidden"
                         style={{ backgroundColor: `hsl(${st.sidebarBg})` }}
                       >
-                        <div className="flex gap-1">
+                        {st.backgroundImage && (
+                          <div
+                            className="absolute inset-0 bg-cover bg-center"
+                            style={{
+                              backgroundImage: `url(${st.backgroundImage})`,
+                              opacity: st.backgroundOpacity || 0.1,
+                              filter: `blur(${st.backgroundBlur || 0}px)`,
+                            }}
+                          />
+                        )}
+                        <div className="flex gap-1 relative z-10">
                           {[1,2,3].map(i => (
                             <div key={i} className="h-1.5 rounded-full" style={{ backgroundColor: `hsl(${st.sidebarFg})`, width: `${12 + i * 8}px`, opacity: 0.5 }} />
                           ))}

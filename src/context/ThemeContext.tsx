@@ -8,6 +8,9 @@ export interface SidebarTheme {
   sidebarAccent: string;
   sidebarBorder: string;
   sidebarMuted: string;
+  backgroundImage?: string;
+  backgroundOpacity?: number;
+  backgroundBlur?: number;
 }
 
 const sidebarThemes: SidebarTheme[] = [
@@ -25,6 +28,10 @@ const sidebarThemes: SidebarTheme[] = [
   { name: 'Menta', sidebarBg: '160 30% 95%', sidebarFg: '160 40% 12%', sidebarAccent: '158 25% 89%', sidebarBorder: '155 20% 85%', sidebarMuted: '160 15% 45%' },
   { name: 'Cielo', sidebarBg: '210 40% 96%', sidebarFg: '210 40% 12%', sidebarAccent: '210 35% 91%', sidebarBorder: '210 30% 88%', sidebarMuted: '210 20% 50%' },
   { name: 'Rosa Suave', sidebarBg: '340 30% 96%', sidebarFg: '340 30% 15%', sidebarAccent: '340 25% 91%', sidebarBorder: '340 20% 88%', sidebarMuted: '340 15% 50%' },
+  // Background image themes
+  { name: '🌸 Pétalos', sidebarBg: '340 40% 94%', sidebarFg: '340 50% 20%', sidebarAccent: '340 30% 88%', sidebarBorder: '340 25% 85%', sidebarMuted: '340 20% 50%', backgroundImage: '/assets/theme-bg-petals.png', backgroundOpacity: 0.15, backgroundBlur: 2 },
+  { name: '🌊 Océano', sidebarBg: '200 60% 18%', sidebarFg: '200 20% 95%', sidebarAccent: '200 50% 25%', sidebarBorder: '200 40% 22%', sidebarMuted: '200 25% 45%', backgroundImage: '/assets/theme-bg-petals.png', backgroundOpacity: 0.08, backgroundBlur: 4 },
+  { name: '🌅 Atardecer', sidebarBg: '25 50% 14%', sidebarFg: '30 30% 95%', sidebarAccent: '20 40% 20%', sidebarBorder: '20 35% 18%', sidebarMuted: '25 25% 45%', backgroundImage: '/assets/theme-bg-petals.png', backgroundOpacity: 0.1, backgroundBlur: 3 },
 ];
 
 interface ThemeContextValue {
@@ -46,7 +53,7 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeConfig>(defaultTheme);
-  const [currentSidebarTheme, setCurrentSidebarTheme] = useState<SidebarTheme>(sidebarThemes[3]); // Purple default
+  const [currentSidebarTheme, setCurrentSidebarTheme] = useState<SidebarTheme>(sidebarThemes[3]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -70,6 +77,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--sidebar-border', currentSidebarTheme.sidebarBorder);
     root.style.setProperty('--sidebar-muted', currentSidebarTheme.sidebarMuted);
     root.style.setProperty('--sidebar-accent-foreground', currentSidebarTheme.sidebarFg);
+    
+    // Background image CSS vars
+    if (currentSidebarTheme.backgroundImage) {
+      root.style.setProperty('--sidebar-bg-image', `url(${currentSidebarTheme.backgroundImage})`);
+      root.style.setProperty('--sidebar-bg-opacity', String(currentSidebarTheme.backgroundOpacity || 0.1));
+      root.style.setProperty('--sidebar-bg-blur', `${currentSidebarTheme.backgroundBlur || 0}px`);
+    } else {
+      root.style.removeProperty('--sidebar-bg-image');
+      root.style.removeProperty('--sidebar-bg-opacity');
+      root.style.removeProperty('--sidebar-bg-blur');
+    }
   }, [currentSidebarTheme]);
 
   const setTheme = (newTheme: Partial<ThemeConfig>) => {

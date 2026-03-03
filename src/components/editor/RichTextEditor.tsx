@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
@@ -9,7 +9,6 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { 
   Bold,
@@ -84,10 +83,14 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
     },
   });
 
-  // Sync content from parent when it changes externally
+  // Sync content from parent ONLY when content changes externally (not from editor itself)
   useEffect(() => {
-    if (editor && content && editor.getHTML() !== content) {
-      editor.commands.setContent(content, { emitUpdate: false });
+    if (editor && content !== undefined) {
+      const currentHTML = editor.getHTML();
+      // Only update if content actually differs and editor is not focused (external change)
+      if (currentHTML !== content && !editor.isFocused) {
+        editor.commands.setContent(content || '<p></p>', { emitUpdate: false });
+      }
     }
   }, [content, editor]);
 
@@ -125,13 +128,13 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
   };
 
   const ToolbarButton = ({ 
-    onClick, 
+    onAction, 
     isActive, 
     children,
     title,
     disabled
   }: { 
-    onClick: () => void; 
+    onAction: () => void; 
     isActive?: boolean; 
     children: React.ReactNode;
     title?: string;
@@ -139,10 +142,10 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
   }) => (
     <button
       type="button"
-      onClick={(e) => {
+      onMouseDown={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        onClick();
+        onAction();
       }}
       title={title}
       disabled={disabled}
@@ -160,16 +163,16 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
   return (
     <div className="border rounded-lg overflow-hidden">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 p-2 bg-muted/50 border-b">
+      <div className="flex flex-wrap items-center gap-0.5 p-2 bg-muted/50 border-b" onMouseDown={(e) => e.preventDefault()}>
         <ToolbarButton
-          onClick={() => editor.chain().focus().undo().run()}
+          onAction={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().undo()}
           title="Deshacer"
         >
           <Undo className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().redo().run()}
+          onAction={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
           title="Rehacer"
         >
@@ -179,21 +182,21 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         <Separator orientation="vertical" className="h-6 mx-1" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          onAction={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           isActive={editor.isActive('heading', { level: 1 })}
           title="Título 1"
         >
           <Heading1 className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          onAction={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           isActive={editor.isActive('heading', { level: 2 })}
           title="Título 2"
         >
           <Heading2 className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          onAction={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
           isActive={editor.isActive('heading', { level: 3 })}
           title="Título 3"
         >
@@ -203,35 +206,35 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         <Separator orientation="vertical" className="h-6 mx-1" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
+          onAction={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive('bold')}
           title="Negrita"
         >
           <Bold className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
+          onAction={() => editor.chain().focus().toggleItalic().run()}
           isActive={editor.isActive('italic')}
           title="Cursiva"
         >
           <Italic className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          onAction={() => editor.chain().focus().toggleUnderline().run()}
           isActive={editor.isActive('underline')}
           title="Subrayado"
         >
           <UnderlineIcon className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleStrike().run()}
+          onAction={() => editor.chain().focus().toggleStrike().run()}
           isActive={editor.isActive('strike')}
           title="Tachado"
         >
           <Strikethrough className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleCode().run()}
+          onAction={() => editor.chain().focus().toggleCode().run()}
           isActive={editor.isActive('code')}
           title="Código"
         >
@@ -241,28 +244,28 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         <Separator orientation="vertical" className="h-6 mx-1" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          onAction={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive('bulletList')}
           title="Lista con viñetas"
         >
           <List className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          onAction={() => editor.chain().focus().toggleOrderedList().run()}
           isActive={editor.isActive('orderedList')}
           title="Lista numerada"
         >
           <ListOrdered className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          onAction={() => editor.chain().focus().toggleBlockquote().run()}
           isActive={editor.isActive('blockquote')}
           title="Cita"
         >
           <Quote className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          onAction={() => editor.chain().focus().setHorizontalRule().run()}
           title="Línea horizontal"
         >
           <Minus className="h-4 w-4" />
@@ -271,28 +274,28 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         <Separator orientation="vertical" className="h-6 mx-1" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          onAction={() => editor.chain().focus().setTextAlign('left').run()}
           isActive={editor.isActive({ textAlign: 'left' })}
           title="Alinear izquierda"
         >
           <AlignLeft className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          onAction={() => editor.chain().focus().setTextAlign('center').run()}
           isActive={editor.isActive({ textAlign: 'center' })}
           title="Centrar"
         >
           <AlignCenter className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          onAction={() => editor.chain().focus().setTextAlign('right').run()}
           isActive={editor.isActive({ textAlign: 'right' })}
           title="Alinear derecha"
         >
           <AlignRight className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+          onAction={() => editor.chain().focus().setTextAlign('justify').run()}
           isActive={editor.isActive({ textAlign: 'justify' })}
           title="Justificar"
         >
@@ -307,48 +310,49 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
             <button
               type="button"
               title="Tabla"
+              onMouseDown={(e) => e.stopPropagation()}
               className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <TableIcon className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => insertTable()}>
+            <DropdownMenuItem onSelect={() => insertTable()}>
               <TableIcon className="h-4 w-4 mr-2" />
               Insertar tabla 3x3
             </DropdownMenuItem>
             {editor.can().addColumnBefore() && (
-              <DropdownMenuItem onClick={() => editor.chain().focus().addColumnBefore().run()}>
+              <DropdownMenuItem onSelect={() => editor.chain().focus().addColumnBefore().run()}>
                 Añadir columna antes
               </DropdownMenuItem>
             )}
             {editor.can().addColumnAfter() && (
-              <DropdownMenuItem onClick={() => editor.chain().focus().addColumnAfter().run()}>
+              <DropdownMenuItem onSelect={() => editor.chain().focus().addColumnAfter().run()}>
                 Añadir columna después
               </DropdownMenuItem>
             )}
             {editor.can().addRowBefore() && (
-              <DropdownMenuItem onClick={() => editor.chain().focus().addRowBefore().run()}>
+              <DropdownMenuItem onSelect={() => editor.chain().focus().addRowBefore().run()}>
                 Añadir fila antes
               </DropdownMenuItem>
             )}
             {editor.can().addRowAfter() && (
-              <DropdownMenuItem onClick={() => editor.chain().focus().addRowAfter().run()}>
+              <DropdownMenuItem onSelect={() => editor.chain().focus().addRowAfter().run()}>
                 Añadir fila después
               </DropdownMenuItem>
             )}
             {editor.can().deleteColumn() && (
-              <DropdownMenuItem onClick={() => editor.chain().focus().deleteColumn().run()}>
+              <DropdownMenuItem onSelect={() => editor.chain().focus().deleteColumn().run()}>
                 Eliminar columna
               </DropdownMenuItem>
             )}
             {editor.can().deleteRow() && (
-              <DropdownMenuItem onClick={() => editor.chain().focus().deleteRow().run()}>
+              <DropdownMenuItem onSelect={() => editor.chain().focus().deleteRow().run()}>
                 Eliminar fila
               </DropdownMenuItem>
             )}
             {editor.can().deleteTable() && (
-              <DropdownMenuItem onClick={() => editor.chain().focus().deleteTable().run()}>
+              <DropdownMenuItem onSelect={() => editor.chain().focus().deleteTable().run()}>
                 Eliminar tabla
               </DropdownMenuItem>
             )}
@@ -361,16 +365,17 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
             <button
               type="button"
               title="Insertar imagen"
+              onMouseDown={(e) => e.stopPropagation()}
               className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <ImageIcon className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => addImageFromFile()}>
+            <DropdownMenuItem onSelect={() => addImageFromFile()}>
               Subir imagen
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addImage()}>
+            <DropdownMenuItem onSelect={() => addImage()}>
               Insertar desde URL
             </DropdownMenuItem>
           </DropdownMenuContent>
