@@ -281,46 +281,6 @@ function OrganizationDashboard() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Actividad Reciente</CardTitle>
-          <CardDescription>Últimas acciones en la plataforma</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {documents.slice(0, 5).map((doc) => (
-              <div 
-                key={doc.id}
-                className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
-                onClick={() => navigate(`/documents/${doc.id}`)}
-              >
-                <div className={cn(
-                  'h-10 w-10 rounded-lg flex items-center justify-center shrink-0',
-                  doc.status === 'signed' ? 'bg-success/10 text-success' :
-                  doc.status === 'pending' ? 'bg-warning/10 text-warning' :
-                  doc.status === 'rejected' ? 'bg-destructive/10 text-destructive' :
-                  'bg-muted text-muted-foreground'
-                )}>
-                  {doc.status === 'signed' ? <CheckCircle2 className="h-5 w-5" /> :
-                   doc.status === 'pending' ? <Clock className="h-5 w-5" /> :
-                   doc.status === 'rejected' ? <XCircle className="h-5 w-5" /> :
-                   <FileText className="h-5 w-5" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{doc.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {doc.status === 'signed' ? 'Firmado' : doc.status === 'pending' ? 'Pendiente de firma' : doc.status === 'rejected' ? 'Rechazado' : 'Borrador'}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {documents.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">No hay documentos recientes</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

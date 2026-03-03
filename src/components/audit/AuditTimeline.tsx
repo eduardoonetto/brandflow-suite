@@ -14,7 +14,10 @@ import {
   Monitor,
   Globe,
   Trash2,
-  Bell
+  Bell,
+  CreditCard,
+  FileKey,
+  PenLine
 } from 'lucide-react';
 
 interface AuditTimelineProps {
@@ -34,7 +37,31 @@ const eventConfig: Record<AuditEvent['type'], {
   signed: { icon: CheckCircle2, label: 'Firmado', color: 'text-success' },
   rejected: { icon: XCircle, label: 'Rechazado', color: 'text-destructive' },
   modified: { icon: Edit3, label: 'Modificado', color: 'text-muted-foreground' },
-  trashed: { icon: Trash2, label: 'Papelera', color: 'text-muted-foreground' },
+  trashed: { icon: Trash2, label: 'Enviado a Papelera', color: 'text-muted-foreground' },
+};
+
+const getMethodIcon = (method?: string) => {
+  if (!method) return null;
+  switch (method) {
+    case 'pin': return PenLine;
+    case 'cedula': return CreditCard;
+    case 'certificate': return FileKey;
+    case 'draw': return PenLine;
+    case 'typed': return PenLine;
+    default: return PenLine;
+  }
+};
+
+const getMethodLabel = (method?: string) => {
+  if (!method) return '';
+  switch (method) {
+    case 'pin': return 'PIN';
+    case 'cedula': return 'Cédula de Identidad';
+    case 'certificate': return 'Certificado Digital';
+    case 'draw': return 'Firma Dibujada';
+    case 'typed': return 'Firma Escrita';
+    default: return method;
+  }
 };
 
 export function AuditTimeline({ events, compact = false }: AuditTimelineProps) {
@@ -102,56 +129,83 @@ export function AuditTimeline({ events, compact = false }: AuditTimelineProps) {
                     Por {event.actorEmail}
                   </p>
                   
-                  {(event.metadata.ipAddress || event.metadata.userAgent || event.metadata.location || event.metadata.signerName || event.metadata.recipientEmail) && (
+                  {/* Metadata section */}
+                  {(event.metadata.ipAddress || event.metadata.userAgent || event.metadata.location || 
+                    event.metadata.signerName || event.metadata.recipientEmail || event.metadata.rejectionReason ||
+                    event.metadata.signatureMethod || event.metadata.trashReason || event.metadata.signatureHash) && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+                      {/* Sent notification details */}
                       {event.metadata.recipientEmail && event.type === 'sent' && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Mail className="h-3 w-3" />
                           <span>Destinatario: {event.metadata.recipientEmail}</span>
                         </div>
                       )}
+                      
+                      {/* Signer info */}
                       {event.metadata.signerName && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <CheckCircle2 className="h-3 w-3" />
                           <span>Firmante: {event.metadata.signerName}</span>
                         </div>
                       )}
+                      
+                      {/* Signature method */}
+                      {event.metadata.signatureMethod && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {(() => {
+                            const MethodIcon = getMethodIcon(event.metadata.signatureMethod);
+                            return MethodIcon ? <MethodIcon className="h-3 w-3" /> : null;
+                          })()}
+                          <span>Método de firma: <strong>{getMethodLabel(event.metadata.signatureMethod)}</strong></span>
+                        </div>
+                      )}
+
+                      {/* Rejection reason */}
+                      {event.metadata.rejectionReason && (
+                        <div className="flex items-start gap-2 text-xs text-destructive">
+                          <XCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                          <span>Motivo de rechazo: <strong>{event.metadata.rejectionReason}</strong></span>
+                        </div>
+                      )}
+
+                      {/* Trash reason */}
+                      {event.metadata.trashReason && (
+                        <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Trash2 className="h-3 w-3 mt-0.5 shrink-0" />
+                          <span>Motivo papelera: <strong>{event.metadata.trashReason}</strong></span>
+                        </div>
+                      )}
+
+                      {/* Location */}
                       {event.metadata.location && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           <span>{event.metadata.location}</span>
                         </div>
                       )}
+                      
+                      {/* IP Address */}
                       {event.metadata.ipAddress && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Globe className="h-3 w-3" />
                           <span>IP: {event.metadata.ipAddress}</span>
                         </div>
                       )}
+                      
+                      {/* User Agent */}
                       {event.metadata.userAgent && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Monitor className="h-3 w-3" />
                           <span className="truncate">{event.metadata.userAgent.substring(0, 50)}...</span>
                         </div>
                       )}
+                      
+                      {/* Signature Hash */}
                       {event.metadata.signatureHash && (
                         <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
                           <CheckCircle2 className="h-3 w-3" />
                           <span className="truncate">Hash: {event.metadata.signatureHash}</span>
-                        </div>
-                      )}
-                      {event.metadata.signatureMethod && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <CheckCircle2 className="h-3 w-3" />
-                          <span>Método: {event.metadata.signatureMethod === 'pin' ? 'PIN' : 
-                                         event.metadata.signatureMethod === 'cedula' ? 'Cédula' : 
-                                         event.metadata.signatureMethod}</span>
-                        </div>
-                      )}
-                      {event.metadata.rejectionReason && (
-                        <div className="flex items-center gap-2 text-xs text-destructive">
-                          <XCircle className="h-3 w-3" />
-                          <span>Razón: {event.metadata.rejectionReason}</span>
                         </div>
                       )}
                     </div>

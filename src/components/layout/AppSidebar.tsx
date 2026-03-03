@@ -47,7 +47,7 @@ const institutionLogos: Record<string, string> = {
 
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const { user, logout } = useAuth();
-  const { theme } = useTheme();
+  const { theme, currentSidebarTheme } = useTheme();
   const { isPersonalInstitution, currentInstitution } = useInstitution();
   const navigate = useNavigate();
   const location = useLocation();
@@ -128,10 +128,21 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
     <aside
       className={cn(
         'fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border',
-        'flex flex-col transition-all duration-300 ease-in-out',
+        'flex flex-col transition-all duration-300 ease-in-out relative overflow-hidden',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
+      {/* Background image overlay for image themes */}
+      {currentSidebarTheme.backgroundImage && (
+        <div
+          className="absolute inset-0 bg-cover bg-center pointer-events-none"
+          style={{
+            backgroundImage: `url(${currentSidebarTheme.backgroundImage})`,
+            opacity: currentSidebarTheme.backgroundOpacity || 0.1,
+            filter: `blur(${currentSidebarTheme.backgroundBlur || 0}px)`,
+          }}
+        />
+      )}
       {/* Header */}
       <div className={cn(
         'h-16 flex items-center border-b border-sidebar-border px-4',
