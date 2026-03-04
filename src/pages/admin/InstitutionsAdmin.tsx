@@ -47,6 +47,7 @@ import {
 import { formatDate } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { TableSkeleton } from '@/components/ui/loading-overlay';
 
 const colorPresets = [
   { name: 'Azul', value: '220 80% 45%' },
@@ -85,6 +86,8 @@ export default function InstitutionsAdmin() {
   const fetchInstitutions = async () => {
     setIsLoading(true);
     try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
       const response = await institutionService.getAll();
       setInstitutions(response.data);
     } catch (error) {
@@ -158,6 +161,8 @@ export default function InstitutionsAdmin() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1200));
       if (editingInstitution) {
         await institutionService.update(editingInstitution.id, formData);
       } else {
@@ -229,6 +234,9 @@ export default function InstitutionsAdmin() {
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
+          {isLoading ? (
+            <TableSkeleton rows={4} cols={5} />
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -311,6 +319,7 @@ export default function InstitutionsAdmin() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 

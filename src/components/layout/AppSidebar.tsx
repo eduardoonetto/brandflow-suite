@@ -30,7 +30,7 @@ import {
   TooltipTrigger 
 } from '@/components/ui/tooltip';
 import { InstitutionSelector } from './InstitutionSelector';
-import dec5Logo from '@/assets/dec5-logo.png';
+import appLogo from '@/assets/app-logo.png';
 import codelcoLogo from '@/assets/codelco-logo.png';
 import falabellaLogo from '@/assets/falabella-logo.png';
 
@@ -40,7 +40,7 @@ interface AppSidebarProps {
 }
 
 const institutionLogos: Record<string, string> = {
-  'inst-personal': dec5Logo,
+  'inst-personal': appLogo,
   'inst-acme': codelcoLogo,
   'inst-tech': falabellaLogo,
 };
@@ -52,7 +52,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const currentLogo = institutionLogos[currentInstitution?.id || ''] || dec5Logo;
+  const currentLogo = institutionLogos[currentInstitution?.id || ''] || appLogo;
 
   const mainNavItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -154,7 +154,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
               src={currentLogo} 
               alt="Logo" 
               className="h-8 w-auto object-contain max-w-[120px]"
-              onError={(e) => { (e.target as HTMLImageElement).src = dec5Logo; }}
+              onError={(e) => { (e.target as HTMLImageElement).src = appLogo; }}
             />
           </div>
         )}
@@ -163,7 +163,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             src={currentLogo}
             alt="Logo" 
             className="h-8 w-8 object-contain"
-            onError={(e) => { (e.target as HTMLImageElement).src = dec5Logo; }}
+            onError={(e) => { (e.target as HTMLImageElement).src = appLogo; }}
           />
         )}
       </div>

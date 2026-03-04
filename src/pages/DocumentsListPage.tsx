@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Document } from '@/types';
+import { CardSkeleton } from '@/components/ui/loading-overlay';
 
 type DocumentTab = 'pending' | 'in-progress' | 'signed' | 'rejected' | 'trashed';
 
@@ -43,6 +44,12 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
+  const [isLoadingDocs, setIsLoadingDocs] = useState(true);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoadingDocs(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   React.useEffect(() => {
     setActiveTab(initialTab);
@@ -225,7 +232,9 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
 
         {tabConfig.map(tab => (
           <TabsContent key={tab.value} value={tab.value} className="mt-0">
-            {documents.length === 0 ? (
+            {isLoadingDocs ? (
+              <CardSkeleton count={4} />
+            ) : documents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
                   <FileText className="h-8 w-8 text-muted-foreground" />

@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
-import loginHero from '@/assets/login-hero.jpg';
-import dec5Logo from '@/assets/dec5-logo.png';
+import appLogo from '@/assets/app-logo.png';
 
 export default function Login() {
   const [step, setStep] = useState<'email' | 'password'>('email');
@@ -27,7 +26,6 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Detect institution from domain on mount
   useEffect(() => {
     const detectFromDomain = async () => {
       const hostname = window.location.hostname;
@@ -46,7 +44,6 @@ export default function Login() {
         }
       }
     };
-    
     detectFromDomain();
   }, [setTheme]);
 
@@ -57,7 +54,6 @@ export default function Login() {
     setIsLoading(true);
     setError('');
 
-    // Try to detect institution from email domain
     const domain = email.split('@')[1];
     if (domain) {
       try {
@@ -97,62 +93,56 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side - Branding with AI image */}
-      <div 
-        className="hidden lg:flex lg:w-1/2 relative flex-col justify-between overflow-hidden"
-      >
-        {/* Background image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${loginHero})` }}
-        />
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-primary/70" />
+      {/* Left side - Modern branding panel */}
+      <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between overflow-hidden bg-gradient-to-br from-[#1a1f36] via-[#1e2a4a] to-[#0f2027]">
+        {/* Abstract decorative shapes */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-20 -right-20 w-96 h-96 rounded-full bg-[#3b82f6]/10 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full bg-[#06b6d4]/8 blur-3xl" />
+          <div className="absolute top-1/2 left-1/3 w-64 h-64 rounded-full bg-[#8b5cf6]/6 blur-3xl" />
+        </div>
         
         {/* Content */}
         <div className="relative z-10 p-12 flex flex-col h-full justify-between">
           <div className="flex items-center gap-3">
             <img 
-              src={dec5Logo} 
-              alt="DEC5 Logo" 
-              className="h-12 w-auto object-contain bg-white/90 rounded-lg px-3 py-1"
+              src={appLogo} 
+              alt="Logo" 
+              className="h-14 w-auto object-contain drop-shadow-lg"
             />
+            <span className="text-xl font-bold text-white/90">Firma Digital</span>
           </div>
           
           <div className="max-w-md">
             <h1 className="text-4xl font-bold text-white mb-4 leading-tight">
-              Firma Digital Empresarial
+              Gestión de Documentos y Firma Digital
             </h1>
-            <p className="text-2xl text-white/90 mb-2">
-              Gestiona y firma documentos de manera segura
-            </p>
-            <p className="text-white/80 text-lg">
-              Plataforma empresarial para la gestión de documentos digitales con 
-              firmas electrónicas legalmente vinculantes.
+            <p className="text-lg text-white/70 mb-2">
+              Plataforma empresarial para gestionar documentos digitales con firmas electrónicas legalmente vinculantes.
             </p>
             
-            <div className="mt-8 grid grid-cols-3 gap-4">
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+            <div className="mt-10 grid grid-cols-3 gap-4">
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                 <p className="text-2xl font-bold text-white">100%</p>
-                <p className="text-sm text-white/70">Digital</p>
+                <p className="text-sm text-white/50">Digital</p>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                 <p className="text-2xl font-bold text-white">24/7</p>
-                <p className="text-sm text-white/70">Disponible</p>
+                <p className="text-sm text-white/50">Disponible</p>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                 <p className="text-2xl font-bold text-white">SSL</p>
-                <p className="text-sm text-white/70">Seguro</p>
+                <p className="text-sm text-white/50">Seguro</p>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 text-white/50 text-sm">
-            <span>© 2024 DEC5</span>
+          <div className="flex items-center gap-4 text-white/30 text-sm">
+            <span>Powered by E-One SpA</span>
             <span>•</span>
-            <a href="#" className="hover:text-white/70">Términos</a>
+            <a href="#" className="hover:text-white/50 transition-colors">Términos</a>
             <span>•</span>
-            <a href="#" className="hover:text-white/70">Privacidad</a>
+            <a href="#" className="hover:text-white/50 transition-colors">Privacidad</a>
           </div>
         </div>
       </div>
@@ -163,9 +153,9 @@ export default function Login() {
           {/* Mobile logo */}
           <div className="lg:hidden flex flex-col items-center justify-center gap-2 mb-8">
             <img 
-              src={dec5Logo} 
-              alt="DEC5 Logo" 
-              className="h-12 w-auto object-contain"
+              src={appLogo} 
+              alt="Logo" 
+              className="h-14 w-auto object-contain"
             />
             <span className="text-xl font-bold text-primary">Firma Digital</span>
           </div>
@@ -209,7 +199,7 @@ export default function Login() {
 
               <Button 
                 type="submit" 
-                className="w-full h-12 bg-gradient-primary hover:opacity-90"
+                className="w-full h-12 bg-gradient-to-r from-[#1e3a5f] to-[#2563eb] hover:opacity-90 text-white"
                 disabled={isLoading || !email}
               >
                 {isLoading ? (
@@ -256,7 +246,7 @@ export default function Login() {
 
               <Button 
                 type="submit" 
-                className="w-full h-12 bg-gradient-primary hover:opacity-90"
+                className="w-full h-12 bg-gradient-to-r from-[#1e3a5f] to-[#2563eb] hover:opacity-90 text-white"
                 disabled={isLoading || !password}
               >
                 {isLoading ? (

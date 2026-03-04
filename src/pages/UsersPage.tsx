@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useInstitution } from '@/context/InstitutionContext';
 import { InstitutionRole } from '@/types';
+import { TableSkeleton } from '@/components/ui/loading-overlay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,12 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoadingUsers(false), 700);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Don't show users for personal institutions
   if (isPersonalInstitution) {
@@ -194,6 +201,9 @@ export default function UsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
+          {isLoadingUsers ? (
+            <TableSkeleton rows={5} cols={4} />
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -270,6 +280,7 @@ export default function UsersPage() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 

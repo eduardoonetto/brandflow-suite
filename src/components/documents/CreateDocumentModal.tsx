@@ -14,7 +14,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { FileText, Upload, Users, ArrowRight, Check } from 'lucide-react';
+import { FileText, Upload, Users, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CreateDocumentModalProps {
@@ -37,6 +37,7 @@ export function CreateDocumentModal({ open, onOpenChange, mode = 'document' }: C
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [showSignerModal, setShowSignerModal] = useState(false);
   const [configuredSigners, setConfiguredSigners] = useState<Omit<DocumentSigner, 'id' | 'documentId' | 'status'>[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +54,9 @@ export function CreateDocumentModal({ open, onOpenChange, mode = 'document' }: C
     setShowSignerModal(false);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
+    setIsCreating(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
     if (mode === 'template') {
       addTemplate({
         title,
@@ -95,6 +98,7 @@ export function CreateDocumentModal({ open, onOpenChange, mode = 'document' }: C
       onOpenChange(false);
       navigate('/documents/pending');
     }
+    setIsCreating(false);
     resetForm();
   };
 
@@ -261,13 +265,19 @@ export function CreateDocumentModal({ open, onOpenChange, mode = 'document' }: C
               <Button onClick={() => setStep('config')}>Continuar<ArrowRight className="h-4 w-4 ml-2" /></Button>
             )}
             {step === 'config' && !needsSignerStep && (
-              <Button onClick={handleCreate} disabled={!canCreate}>{mode === 'template' ? 'Crear Plantilla' : 'Crear Documento'}</Button>
+              <Button onClick={handleCreate} disabled={!canCreate || isCreating}>
+                {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {mode === 'template' ? 'Crear Plantilla' : 'Crear Documento'}
+              </Button>
             )}
             {step === 'config' && needsSignerStep && (
               <Button onClick={() => setStep('signers')} disabled={!canProceedToSigners}>Continuar<ArrowRight className="h-4 w-4 ml-2" /></Button>
             )}
             {step === 'signers' && (
-              <Button onClick={handleCreate} disabled={!canCreate}>Crear Documento</Button>
+              <Button onClick={handleCreate} disabled={!canCreate || isCreating}>
+                {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Crear Documento
+              </Button>
             )}
           </DialogFooter>
         </DialogContent>
