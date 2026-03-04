@@ -41,7 +41,7 @@ import {
 import { cn } from '@/lib/utils';
 import { AuditEvent, DocumentStatus, DocumentSigner } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 // Mock audit events
 const mockAuditEvents: AuditEvent[] = [
   {
@@ -134,6 +134,7 @@ export default function DocumentEditor() {
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [showSignerModal, setShowSignerModal] = useState(false);
   const [configuredSigners, setConfiguredSigners] = useState<Omit<DocumentSigner, 'id' | 'documentId' | 'status'>[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Initialize state from entity data
   useEffect(() => {
@@ -192,7 +193,11 @@ export default function DocumentEditor() {
     }
   }, [entityData, setValue]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsSaving(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    
     const docTags = tags.filter(t => selectedTags.includes(t.id));
     
     if (isTemplatePath && existingTemplate) {
@@ -205,7 +210,6 @@ export default function DocumentEditor() {
       });
       toast({ title: 'Plantilla guardada', description: 'Los cambios han sido guardados' });
     } else if (sourceTemplate || (isNew && !isTemplatePath)) {
-      // Creating a new document from template
       addDocument({
         templateId: sourceTemplate?.id,
         title,
@@ -225,7 +229,9 @@ export default function DocumentEditor() {
         signatures: [],
       });
       toast({ title: 'Documento creado', description: 'El documento ha sido enviado a los firmantes' });
+      setIsSaving(false);
       navigate('/documents/pending');
+      return;
     } else if (existingDoc) {
       updateDocument(id!, {
         title,
@@ -236,6 +242,7 @@ export default function DocumentEditor() {
       });
       toast({ title: 'Documento guardado' });
     }
+    setIsSaving(false);
   };
 
   const handleSendToSign = () => {
@@ -272,6 +279,14 @@ export default function DocumentEditor() {
   const showHistoryTab = !isNew && existingDoc?.signers?.length > 0;
   const showSendButton = sourceTemplate || (isTemplatePath && existingTemplate);
   const showPdfViewer = isPdfMode && existingTemplate?.pdfUrl;
+
+  if (isSaving) {
+    return (
+      <div className="h-[calc(100vh-6rem)] flex items-center justify-center">
+        <LoadingOverlay message={sourceTemplate ? 'Creando documento y notificando firmantes...' : 'Guardando cambios...'} />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col animate-fade-in">
@@ -327,7 +342,7 @@ export default function DocumentEditor() {
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" onClick={handleSave}>
+          <Button variant="outline" onClick={handleSave} disabled={isSaving}>
             <Save className="h-4 w-4 mr-2" />
             Guardar
           </Button>

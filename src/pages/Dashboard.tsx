@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { formatPercentage } from '@/utils/formatters';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend,
@@ -109,18 +110,29 @@ function OrganizationDashboard() {
   const { documents, pendingDocuments, signedDocuments, rejectedDocuments } = useDocuments();
   const navigate = useNavigate();
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true);
       try {
         const response = await kpiService.getDashboardData(currentInstitution?.id || '');
         setKpiData(response.data);
       } catch (error) {
         console.error('Failed to fetch KPIs:', error);
       }
+      setIsLoading(false);
     };
     fetchData();
   }, [currentInstitution]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <LoadingOverlay message="Cargando estadísticas..." />
+      </div>
+    );
+  }
 
   const statCards = [
     { title: 'Documentos Totales', value: documents.length, icon: FileText, color: 'text-primary', bgColor: 'bg-primary/10' },

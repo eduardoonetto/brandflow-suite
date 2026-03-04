@@ -29,7 +29,7 @@ export function MainLayout() {
           </Sheet>
         </header>
         
-        <main className="min-h-screen pt-14 flex-1">
+        <main className="flex-1 pt-14">
           <div className="p-4">
             <Outlet />
           </div>
@@ -45,31 +45,30 @@ export function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
       <AppSidebar 
         collapsed={sidebarCollapsed} 
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
       />
       
-      <main
+      <div
         className={cn(
-          'min-h-screen transition-all duration-300 ease-in-out flex-1',
+          'min-h-screen flex flex-col transition-all duration-300 ease-in-out',
           sidebarCollapsed ? 'ml-16' : 'ml-64'
         )}
       >
-        <div className="p-6 lg:p-8">
-          <Outlet />
-        </div>
-      </main>
+        <main className="flex-1">
+          <div className="p-6 lg:p-8">
+            <Outlet />
+          </div>
+        </main>
 
-      <footer className={cn(
-        'border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background transition-all duration-300',
-        sidebarCollapsed ? 'ml-16' : 'ml-64'
-      )}>
-        <span>Powered by</span>
-        <img src={eoneLogo} alt="E-One SpA" className="h-5 w-auto object-contain" />
-        <span className="font-medium">E-One SpA</span>
-      </footer>
+        <footer className="border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background">
+          <span>Powered by</span>
+          <img src={eoneLogo} alt="E-One SpA" className="h-5 w-auto object-contain" />
+          <span className="font-medium">E-One SpA</span>
+        </footer>
+      </div>
     </div>
   );
 }

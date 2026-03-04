@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
+import { CardSkeleton } from '@/components/ui/loading-overlay';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -27,6 +28,13 @@ export default function TemplatesPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+
+  // Simulate initial load
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoadingTemplates(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (isPersonalInstitution) {
     return (
@@ -135,7 +143,9 @@ export default function TemplatesPage() {
         />
       </div>
 
-      {Object.keys(groupedTemplates).length === 0 ? (
+      {isLoadingTemplates ? (
+        <CardSkeleton count={6} />
+      ) : Object.keys(groupedTemplates).length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
             <FileText className="h-8 w-8 text-muted-foreground" />
