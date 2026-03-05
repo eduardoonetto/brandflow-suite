@@ -173,7 +173,7 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Gestión de Documentos</h1>
