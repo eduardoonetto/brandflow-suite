@@ -59,10 +59,8 @@ export function MainLayout() {
           sidebarCollapsed ? 'ml-16' : 'ml-64'
         )}
       >
-        <main className="flex-1">
-          <div className="p-6 lg:p-8">
-            <Outlet />
-          </div>
+        <main className="flex-1 p-4 lg:p-6">
+          <Outlet />
         </main>
 
         <footer className="border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background shrink-0">
