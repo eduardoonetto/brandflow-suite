@@ -16,7 +16,7 @@ export function MainLayout() {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-sidebar border-b border-sidebar-border flex items-center px-4">
+        <header className="sticky top-0 z-50 h-14 bg-sidebar border-b border-sidebar-border flex items-center px-4 shrink-0">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="mr-2 text-sidebar-foreground">
@@ -29,13 +29,13 @@ export function MainLayout() {
           </Sheet>
         </header>
         
-        <main className="flex-1 pt-14">
+        <main className="flex-1">
           <div className="p-4">
             <Outlet />
           </div>
         </main>
 
-        <footer className="border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background">
+        <footer className="border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background shrink-0">
           <span>Powered by</span>
           <img src={eoneLogo} alt="E-One SpA" className="h-5 w-auto object-contain" />
           <span className="font-medium">E-One SpA</span>
@@ -45,15 +45,17 @@ export function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen w-full bg-background">
+      {/* Sidebar */}
       <AppSidebar 
         collapsed={sidebarCollapsed} 
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
       />
       
+      {/* Main content area - offset by sidebar width */}
       <div
         className={cn(
-          'min-h-screen flex flex-col transition-all duration-300 ease-in-out',
+          'flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out',
           sidebarCollapsed ? 'ml-16' : 'ml-64'
         )}
       >
@@ -63,7 +65,7 @@ export function MainLayout() {
           </div>
         </main>
 
-        <footer className="border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background">
+        <footer className="border-t py-3 px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background shrink-0">
           <span>Powered by</span>
           <img src={eoneLogo} alt="E-One SpA" className="h-5 w-auto object-contain" />
           <span className="font-medium">E-One SpA</span>
