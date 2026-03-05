@@ -190,7 +190,7 @@ export default function Login() {
                     placeholder="nombre@empresa.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-12"
+                    className="pl-10 h-12 focus-visible:ring-[#2563eb]"
                     autoFocus
                     required
                   />
@@ -224,7 +224,7 @@ export default function Login() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 h-12"
+                    className="pl-10 h-12 focus-visible:ring-[#2563eb]"
                     autoFocus
                     required
                   />
@@ -235,7 +235,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setStep('email')}
-                  className="text-primary hover:underline"
+                  className="text-[#2563eb] hover:underline"
                 >
                   Usar otro correo
                 </button>
@@ -263,7 +263,7 @@ export default function Login() {
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
             ¿No tiene una cuenta?{' '}
-            <Link to="/register" className="text-primary hover:underline font-medium">
+            <Link to="/register" className="text-[#2563eb] hover:underline font-medium">
               Registrarse
             </Link>
           </p>
