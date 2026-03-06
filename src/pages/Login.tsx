@@ -6,7 +6,7 @@ import { authService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, Code } from 'lucide-react';
 import appLogo from '@/assets/app-logo.png';
 
 export default function Login() {
@@ -265,6 +265,12 @@ export default function Login() {
             ¿No tiene una cuenta?{' '}
             <Link to="/register" className="text-[#2563eb] hover:underline font-medium">
               Registrarse
+            </Link>
+          </p>
+          <p className="mt-3 text-center">
+            <Link to="/api-docs" className="text-xs text-muted-foreground hover:text-[#2563eb] hover:underline flex items-center justify-center gap-1">
+              <Code className="h-3.5 w-3.5" />
+              Documentación API
             </Link>
           </p>
         </div>
