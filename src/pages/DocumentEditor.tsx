@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useDocuments } from '@/context/DocumentContext';
+import { useAuth } from '@/context/AuthContext';
 import { useDocumentVariables } from '@/hooks/useDocumentVariables';
 import { VariablePanel } from '@/components/editor/VariablePanel';
 import { DocumentPreview } from '@/components/editor/DocumentPreview';
@@ -9,6 +10,7 @@ import { AuditTimeline } from '@/components/audit/AuditTimeline';
 import { RichTextEditor } from '@/components/editor/RichTextEditor';
 import { TagCreator } from '@/components/documents/TagCreator';
 import { SignerConfigModal } from '@/components/documents/SignerConfigModal';
+import { TrashDocumentModal } from '@/components/documents/TrashDocumentModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,69 +38,113 @@ import {
   History,
   X,
   Users,
-  FileText
+  FileText,
+  Trash2,
+  UserPlus,
+  Info
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AuditEvent, DocumentStatus, DocumentSigner } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
-// Mock audit events
-const mockAuditEvents: AuditEvent[] = [
-  {
-    id: 'evt-1',
-    documentId: 'doc-1',
-    type: 'created',
-    timestamp: new Date(Date.now() - 86400000 * 5),
-    actorId: 'user-1',
-    actorEmail: 'admin@acme.com',
-    metadata: {},
-  },
-  {
-    id: 'evt-2',
-    documentId: 'doc-1',
-    type: 'sent',
-    timestamp: new Date(Date.now() - 86400000 * 4),
-    actorId: 'user-1',
-    actorEmail: 'admin@acme.com',
-    metadata: { recipientEmail: 'maria@example.com' },
-  },
-  {
-    id: 'evt-3',
-    documentId: 'doc-1',
-    type: 'signed',
-    timestamp: new Date(Date.now() - 86400000 * 3),
-    actorId: 'user-2',
-    actorEmail: 'maria@example.com',
-    metadata: { signerName: 'María López', signatureMethod: 'pin', ipAddress: '192.168.1.10', location: 'Santiago, Chile', signatureHash: 'a3f8b2c1d4e5...9f0a1b2c3d4e' },
-  },
-  {
-    id: 'evt-4',
-    documentId: 'doc-1',
-    type: 'sent',
-    timestamp: new Date(Date.now() - 86400000 * 3),
-    actorId: 'system',
-    actorEmail: 'sistema',
-    metadata: { recipientEmail: 'pedro@example.com' },
-  },
-  {
-    id: 'evt-5',
-    documentId: 'doc-1',
-    type: 'rejected',
-    timestamp: new Date(Date.now() - 86400000 * 2),
-    actorId: 'user-3',
-    actorEmail: 'pedro@example.com',
-    metadata: { signerName: 'Pedro Soto', rejectionReason: 'Datos incorrectos en la cláusula tercera, favor corregir monto del contrato.', ipAddress: '10.0.0.5' },
-  },
-  {
-    id: 'evt-6',
-    documentId: 'doc-1',
-    type: 'sent',
-    timestamp: new Date(Date.now() - 86400000 * 1),
-    actorId: 'system',
-    actorEmail: 'sistema',
-    metadata: { recipientEmail: 'admin@acme.com' },
-  },
-];
+
+// Mock audit events - now dynamically generated based on document
+function generateAuditEvents(doc: any, templates: any[]): AuditEvent[] {
+  const events: AuditEvent[] = [
+    {
+      id: 'evt-1',
+      documentId: doc?.id || 'doc-1',
+      type: 'created',
+      timestamp: doc?.createdAt || new Date(Date.now() - 86400000 * 5),
+      actorId: doc?.createdBy || 'user-1',
+      actorEmail: doc?.createdBy === 'user-1' ? 'admin@acme.com' : 
+                  doc?.createdBy === 'user-2' ? 'maria@acme.com' : 
+                  doc?.createdBy === 'user-3' ? 'carlos@acme.com' :
+                  doc?.createdBy === 'user-4' ? 'ana@acme.com' :
+                  doc?.createdBy === 'user-5' ? 'pedro@acme.com' : 'admin@acme.com',
+      metadata: {},
+    },
+  ];
+
+  if (doc?.signers) {
+    doc.signers.forEach((signer: DocumentSigner, idx: number) => {
+      // Add sent notification
+      events.push({
+        id: `evt-sent-${idx}`,
+        documentId: doc.id,
+        type: 'sent',
+        timestamp: new Date((doc.createdAt?.getTime() || Date.now()) + 60000 * (idx + 1)),
+        actorId: 'system',
+        actorEmail: 'sistema',
+        metadata: { recipientEmail: signer.email },
+      });
+
+      if (signer.status === 'signed' && signer.signedAt) {
+        events.push({
+          id: `evt-signed-${idx}`,
+          documentId: doc.id,
+          type: 'signed',
+          timestamp: signer.signedAt,
+          actorId: signer.userId || signer.id,
+          actorEmail: signer.email,
+          metadata: { 
+            signerName: signer.name, 
+            signatureMethod: signer.signatureType,
+            ipAddress: '192.168.1.' + (10 + idx),
+            location: 'Santiago, Chile',
+          },
+        });
+      }
+
+      if (signer.status === 'rejected' && signer.rejectedAt) {
+        events.push({
+          id: `evt-rejected-${idx}`,
+          documentId: doc.id,
+          type: 'rejected',
+          timestamp: signer.rejectedAt,
+          actorId: signer.userId || signer.id,
+          actorEmail: signer.email,
+          metadata: { 
+            signerName: signer.name,
+            rejectionReason: signer.rejectionReason || 'Sin motivo especificado',
+            ipAddress: '10.0.0.' + (5 + idx),
+          },
+        });
+      }
+    });
+  }
+
+  // Add trash event
+  if (doc?.status === 'trashed' && doc.trashedAt) {
+    events.push({
+      id: 'evt-trashed',
+      documentId: doc.id,
+      type: 'trashed',
+      timestamp: doc.trashedAt,
+      actorId: doc.createdBy,
+      actorEmail: doc.createdBy === 'user-1' ? 'admin@acme.com' : 'unknown@acme.com',
+      metadata: { trashReason: doc.trashReason || '' },
+    });
+  }
+
+  // Sort by timestamp
+  events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  return events;
+}
+
+const CURRENT_USER_ID = 'user-1';
+
+// Helper to get creator display info
+function getCreatorInfo(createdBy: string): { name: string; email: string } {
+  const creators: Record<string, { name: string; email: string }> = {
+    'user-1': { name: 'John Smith', email: 'admin@acme.com' },
+    'user-2': { name: 'María García', email: 'maria@acme.com' },
+    'user-3': { name: 'Carlos Rodríguez', email: 'carlos@acme.com' },
+    'user-4': { name: 'Ana Torres', email: 'ana@acme.com' },
+    'user-5': { name: 'Pedro López', email: 'pedro@acme.com' },
+  };
+  return creators[createdBy] || { name: 'Usuario desconocido', email: '' };
+}
 
 export default function DocumentEditor() {
   const { id } = useParams();
@@ -106,23 +152,23 @@ export default function DocumentEditor() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { documents, templates, tags, updateDocument, addDocument, addTag, updateTemplate } = useDocuments();
   
-  // Detect if we're editing a template
   const isTemplatePath = location.pathname.startsWith('/templates');
   const templateIdFromQuery = searchParams.get('templateId');
   
   const isNew = id === 'new';
   
-  // Find the entity - could be a document or a template
   const existingDoc = documents.find(d => d.id === id);
   const existingTemplate = templates.find(t => t.id === id);
   const sourceTemplate = templateIdFromQuery ? templates.find(t => t.id === templateIdFromQuery) : null;
   
-  // Determine if this is a PDF-only document (no template editor needed)
-  const isPdfMode = existingTemplate?.templateType === 'upload' || existingDoc?.templateId === undefined && !existingTemplate;
+  // Determine if this is a PDF-based document
+  const isPdfTemplate = existingTemplate?.templateType === 'upload';
+  const isDocFromPdfTemplate = existingDoc?.templateId ? templates.find(t => t.id === existingDoc.templateId)?.templateType === 'upload' : false;
+  const isPdfMode = isPdfTemplate || isDocFromPdfTemplate;
   
-  // Use template data when editing a template
   const entityData = isTemplatePath ? existingTemplate : existingDoc;
   
   const [title, setTitle] = useState('');
@@ -130,13 +176,13 @@ export default function DocumentEditor() {
   const [content, setContent] = useState('');
   const [status, setStatus] = useState<DocumentStatus>('draft');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState('edit');
+  const [activeTab, setActiveTab] = useState(isPdfMode ? 'preview' : 'edit');
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [showSignerModal, setShowSignerModal] = useState(false);
+  const [showTrashModal, setShowTrashModal] = useState(false);
   const [configuredSigners, setConfiguredSigners] = useState<Omit<DocumentSigner, 'id' | 'documentId' | 'status'>[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Initialize state from entity data
   useEffect(() => {
     if (sourceTemplate) {
       setTitle(sourceTemplate.title);
@@ -168,6 +214,11 @@ export default function DocumentEditor() {
     }
   }, [entityData, sourceTemplate]);
 
+  // Set active tab when isPdfMode changes
+  useEffect(() => {
+    if (isPdfMode) setActiveTab('preview');
+  }, [isPdfMode]);
+
   const { 
     variables, 
     values, 
@@ -195,7 +246,6 @@ export default function DocumentEditor() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1200));
     
     const docTags = tags.filter(t => selectedTags.includes(t.id));
@@ -214,7 +264,7 @@ export default function DocumentEditor() {
         templateId: sourceTemplate?.id,
         title,
         description,
-        content,
+        content: isPdfMode ? 'Documento PDF subido' : content,
         status: 'pending',
         tags: docTags,
         institutionId: 'inst-acme',
@@ -254,13 +304,39 @@ export default function DocumentEditor() {
   };
 
   const handleSignersConfirmed = (signers: Omit<DocumentSigner, 'id' | 'documentId' | 'status'>[]) => {
-    setConfiguredSigners(signers);
+    setConfiguredSigners(prev => [...prev, ...signers]);
     setShowSignerModal(false);
+    
+    // If adding to existing document, also update the document
+    if (existingDoc && !isNew) {
+      const newSigners = signers.map((s, idx) => ({
+        ...s,
+        id: `signer-${Date.now()}-${idx}`,
+        documentId: existingDoc.id,
+        status: 'pending' as const,
+      }));
+      updateDocument(existingDoc.id, {
+        signers: [...existingDoc.signers, ...newSigners],
+      });
+      toast({ title: 'Firmantes agregados', description: `Se agregaron ${signers.length} firmante(s) al documento` });
+    }
   };
 
   const handleSignatureComplete = (data: any) => {
     updateDocument(id!, { status: 'signed' });
     setStatus('signed');
+  };
+
+  const handleTrashConfirm = (reason: string) => {
+    if (existingDoc) {
+      updateDocument(existingDoc.id, {
+        status: 'trashed',
+        trashedAt: new Date(),
+        trashReason: reason,
+      });
+      toast({ title: 'Documento enviado a papelera', description: 'El documento ha sido movido a la papelera' });
+      navigate('/documents/trashed');
+    }
   };
 
   const toggleTag = (tagId: string) => {
@@ -276,9 +352,26 @@ export default function DocumentEditor() {
     setSelectedTags(prev => [...prev, newTag.id]);
   };
 
-  const showHistoryTab = !isNew && existingDoc?.signers?.length > 0;
+  const showHistoryTab = !isNew && (existingDoc?.signers?.length > 0 || existingDoc?.status === 'trashed');
   const showSendButton = sourceTemplate || (isTemplatePath && existingTemplate);
-  const showPdfViewer = isPdfMode && existingTemplate?.pdfUrl;
+  const showPdfViewer = isPdfMode && (existingTemplate?.pdfUrl || sourceTemplate?.pdfUrl);
+  const pdfUrl = existingTemplate?.pdfUrl || sourceTemplate?.pdfUrl || '/sample.pdf';
+
+  // Can trash: only creator, not fully signed, not already trashed
+  const canTrash = existingDoc && 
+    existingDoc.createdBy === CURRENT_USER_ID && 
+    existingDoc.status !== 'trashed' && 
+    existingDoc.status !== 'signed';
+
+  // Can add signer: document exists, not fully signed
+  const allSigned = existingDoc?.signers?.every(s => s.status === 'signed') || false;
+  const canAddSigner = existingDoc && !isNew && existingDoc.status !== 'trashed' && !allSigned;
+
+  // Creator info
+  const creatorInfo = existingDoc ? getCreatorInfo(existingDoc.createdBy) : null;
+
+  // Dynamic audit events
+  const auditEvents = existingDoc ? generateAuditEvents(existingDoc, templates) : [];
 
   if (isSaving) {
     return (
@@ -309,14 +402,22 @@ export default function DocumentEditor() {
                 status === 'draft' ? 'status-draft' :
                 status === 'pending' ? 'status-pending' :
                 status === 'signed' ? 'status-signed' :
+                status === 'trashed' ? 'status-draft' :
                 'status-rejected'
               )}>
                 {isTemplatePath ? 'Plantilla' :
                  status === 'draft' ? 'Borrador' :
                  status === 'pending' ? 'Pendiente' :
                  status === 'signed' ? 'Firmado' :
+                 status === 'trashed' ? 'Papelera' :
                  'Rechazado'}
               </span>
+              {creatorInfo && !isTemplatePath && !isNew && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  Creado por: {creatorInfo.name} ({creatorInfo.email})
+                </span>
+              )}
               {selectedTags.map(tagId => {
                 const tag = tags.find(t => t.id === tagId);
                 if (!tag) return null;
@@ -342,6 +443,13 @@ export default function DocumentEditor() {
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
+          {canTrash && (
+            <Button variant="outline" size="sm" onClick={() => setShowTrashModal(true)} className="text-destructive hover:text-destructive">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Papelera
+            </Button>
+          )}
+
           <Button variant="outline" onClick={handleSave} disabled={isSaving}>
             <Save className="h-4 w-4 mr-2" />
             Guardar
@@ -376,7 +484,7 @@ export default function DocumentEditor() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <TabsList className="w-fit">
-                {!showPdfViewer && (
+                {!isPdfMode && (
                   <TabsTrigger value="edit" className="gap-2">
                     <Edit3 className="h-4 w-4" />
                     Editar
@@ -406,7 +514,7 @@ export default function DocumentEditor() {
               />
             </div>
             
-            {!showPdfViewer && (
+            {!isPdfMode && (
               <TabsContent value="edit" className="flex-1 m-0">
                 <div className="h-full flex flex-col gap-4">
                   <div className="flex-1">
@@ -426,10 +534,10 @@ export default function DocumentEditor() {
             )}
             
             <TabsContent value="preview" className="flex-1 m-0">
-              {showPdfViewer ? (
+              {isPdfMode ? (
                 <div className="h-full bg-muted rounded-lg overflow-hidden">
                   <iframe
-                    src={`${existingTemplate?.pdfUrl || '/sample.pdf'}#toolbar=1&navpanes=0`}
+                    src={`${pdfUrl}#toolbar=1&navpanes=0`}
                     className="w-full h-full min-h-[500px] border-0"
                     title="PDF Viewer"
                   />
@@ -469,22 +577,31 @@ export default function DocumentEditor() {
                 )}
 
                 <Button onClick={() => setShowSignerModal(true)} className="w-full" variant={configuredSigners.length > 0 ? 'outline' : 'default'}>
-                  <Users className="h-4 w-4 mr-2" />
-                  {configuredSigners.length > 0 ? 'Modificar Firmantes' : 'Configurar Firmantes'}
+                  {canAddSigner ? (
+                    <>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Agregar Firmante
+                    </>
+                  ) : (
+                    <>
+                      <Users className="h-4 w-4 mr-2" />
+                      {configuredSigners.length > 0 ? 'Modificar Firmantes' : 'Configurar Firmantes'}
+                    </>
+                  )}
                 </Button>
               </div>
             </TabsContent>
             
             {showHistoryTab && (
               <TabsContent value="history" className="flex-1 m-0 overflow-y-auto">
-                <AuditTimeline events={mockAuditEvents} />
+                <AuditTimeline events={auditEvents} />
               </TabsContent>
             )}
           </Tabs>
         </div>
 
         {/* Variable panel - only show for template-type docs */}
-        {!showPdfViewer && variables.length > 0 && (
+        {!isPdfMode && variables.length > 0 && (
           <div className="w-80 shrink-0">
             <VariablePanel
               variables={variables}
@@ -507,6 +624,13 @@ export default function DocumentEditor() {
         open={showSignerModal}
         onOpenChange={setShowSignerModal}
         onConfirm={handleSignersConfirmed}
+      />
+
+      <TrashDocumentModal
+        open={showTrashModal}
+        onOpenChange={setShowTrashModal}
+        onConfirm={handleTrashConfirm}
+        documentTitle={title}
       />
     </div>
   );

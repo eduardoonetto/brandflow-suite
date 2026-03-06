@@ -6,6 +6,7 @@ import { DocumentSignatureCard } from '@/components/documents/DocumentSignatureC
 import { PDFViewerModal } from '@/components/documents/PDFViewerModal';
 import { SignatureModal } from '@/components/signature/SignatureModal';
 import { RejectDocumentModal } from '@/components/documents/RejectDocumentModal';
+import { TrashDocumentModal } from '@/components/documents/TrashDocumentModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -42,6 +43,7 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
   const [searchQuery, setSearchQuery] = useState('');
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showTrashModal, setShowTrashModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [isLoadingDocs, setIsLoadingDocs] = useState(true);
@@ -121,6 +123,23 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
   const handleView = (doc: Document) => {
     setSelectedDocument(doc);
     setShowPDFViewer(true);
+  };
+
+  const handleTrash = (doc: Document) => {
+    setSelectedDocument(doc);
+    setShowTrashModal(true);
+  };
+
+  const handleTrashConfirm = (reason: string) => {
+    if (selectedDocument) {
+      updateDocument(selectedDocument.id, {
+        status: 'trashed',
+        trashedAt: new Date(),
+        trashReason: reason,
+      });
+    }
+    setShowTrashModal(false);
+    setSelectedDocument(null);
   };
 
   const handleSignatureComplete = () => {
@@ -244,17 +263,23 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {documents.map((doc) => (
-                  <DocumentSignatureCard
-                    key={doc.id}
-                    document={doc}
-                    showSignButton={activeTab === 'pending'}
-                    showRejectButton={activeTab === 'pending'}
-                    onSign={() => handleSign(doc)}
-                    onReject={() => handleReject(doc)}
-                    onView={() => handleView(doc)}
-                  />
-                ))}
+                {documents.map((doc) => {
+                  const CURRENT_USER_ID_LOCAL = 'user-1';
+                  const canTrashDoc = doc.createdBy === CURRENT_USER_ID_LOCAL && doc.status !== 'trashed' && doc.status !== 'signed';
+                  return (
+                    <DocumentSignatureCard
+                      key={doc.id}
+                      document={doc}
+                      showSignButton={activeTab === 'pending'}
+                      showRejectButton={activeTab === 'pending'}
+                      showTrashButton={canTrashDoc && (activeTab === 'pending' || activeTab === 'rejected')}
+                      onSign={() => handleSign(doc)}
+                      onReject={() => handleReject(doc)}
+                      onView={() => handleView(doc)}
+                      onTrash={() => handleTrash(doc)}
+                    />
+                  );
+                })}
               </div>
             )}
           </TabsContent>
@@ -287,6 +312,13 @@ export default function DocumentsListPage({ initialTab = 'pending' }: DocumentsL
           setShowPDFViewer(false);
           handleRejectConfirm(reason);
         }}
+      />
+
+      <TrashDocumentModal
+        open={showTrashModal}
+        onOpenChange={setShowTrashModal}
+        onConfirm={handleTrashConfirm}
+        documentTitle={selectedDocument?.title || ''}
       />
     </div>
   );

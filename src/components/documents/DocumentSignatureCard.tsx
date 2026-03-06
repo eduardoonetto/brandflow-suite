@@ -17,7 +17,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Users
+  Users,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -27,24 +28,36 @@ interface DocumentSignatureCardProps {
   document: Document;
   showSignButton?: boolean;
   showRejectButton?: boolean;
+  showTrashButton?: boolean;
   onSign?: () => void;
   onReject?: () => void;
   onView?: () => void;
+  onTrash?: () => void;
 }
 
 export function DocumentSignatureCard({ 
   document, 
   showSignButton = true,
   showRejectButton = false,
+  showTrashButton = false,
   onSign,
   onReject,
-  onView
+  onView,
+  onTrash
 }: DocumentSignatureCardProps) {
   const navigate = useNavigate();
 
   const getStatusBadge = () => {
     const pendingSigners = document.signers.filter(s => s.status === 'pending').length;
     
+    if (document.status === 'trashed') {
+      return (
+        <Badge className="bg-muted text-muted-foreground border-0">
+          <Trash2 className="h-3 w-3 mr-1" />
+          Papelera
+        </Badge>
+      );
+    }
     if (document.status === 'signed') {
       return (
         <Badge className="bg-success/15 text-success border-0">
@@ -182,6 +195,28 @@ export function DocumentSignatureCard({
           </div>
         )}
 
+        {/* Trash reason for trashed docs */}
+        {document.status === 'trashed' && document.trashReason && (
+          <div className="bg-muted/50 rounded-lg p-3 flex items-start gap-2">
+            <Trash2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Motivo de papelera:</p>
+              <p className="text-xs text-muted-foreground">{document.trashReason}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Rejection reason for rejected docs */}
+        {document.status === 'rejected' && document.signers.filter(s => s.status === 'rejected').map(s => (
+          <div key={s.id} className="bg-destructive/5 rounded-lg p-3 flex items-start gap-2">
+            <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-destructive">Rechazado por {s.name}:</p>
+              <p className="text-xs text-muted-foreground">{s.rejectionReason || 'Sin motivo'}</p>
+            </div>
+          </div>
+        ))}
+
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-2 pt-2">
           <Button 
@@ -212,6 +247,17 @@ export function DocumentSignatureCard({
             >
               <XCircle className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Rechazar</span>
+            </Button>
+          )}
+          {showTrashButton && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              onClick={onTrash}
+            >
+              <Trash2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Papelera</span>
             </Button>
           )}
         </div>

@@ -21,6 +21,7 @@ import UsersPage from "@/pages/UsersPage";
 import Settings from "@/pages/Settings";
 import InstitutionsAdmin from "@/pages/admin/InstitutionsAdmin";
 import NotFound from "@/pages/NotFound";
+import ApiDocsPage from "@/pages/ApiDocsPage";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/api-docs" element={<ApiDocsPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       
       <Route element={

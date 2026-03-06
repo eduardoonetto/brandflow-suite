@@ -389,6 +389,26 @@ const mockDocuments: Document[] = [
     finalizedAt: new Date(Date.now() - 86400000 * 3),
     documentHash: 'sha256:mno012pqr345...',
   },
+  {
+    id: 'doc-10',
+    title: 'Contrato de Arriendo Duplicado',
+    description: 'Contrato duplicado que fue enviado a la papelera por error de creación',
+    content: 'Contrato de arriendo entre las partes...',
+    status: 'trashed',
+    tags: [mockTags[0]],
+    institutionId: 'inst-acme',
+    createdBy: 'user-1',
+    variables: [],
+    signers: [
+      { id: 'signer-18', documentId: 'doc-10', userId: 'user-2', email: 'maria@acme.com', name: 'María García', rut: '11.222.333-4', order: 1, status: 'pending', signerType: 'signer', signatureType: 'pin' },
+    ],
+    signatures: [],
+    fileSize: '1.8 MB',
+    createdAt: new Date(Date.now() - 86400000 * 3),
+    updatedAt: new Date(Date.now() - 86400000 * 1),
+    trashedAt: new Date(Date.now() - 86400000 * 1),
+    trashReason: 'Documento duplicado. Se generó por error y ya existe una versión correcta (doc-1).',
+  },
 ];
 
 const defaultFilters: FilterState = {
