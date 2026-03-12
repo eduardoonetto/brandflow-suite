@@ -18,6 +18,7 @@ import {
   FileClock,
   Trash2,
   Shield,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -60,6 +61,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
 
   if (!isPersonalInstitution) {
     mainNavItems.push({ icon: FileStack, label: 'Plantillas', path: '/templates' });
+    mainNavItems.push({ icon: Mail, label: 'Correos', path: '/email-templates' });
   }
 
   const documentNavItems = [

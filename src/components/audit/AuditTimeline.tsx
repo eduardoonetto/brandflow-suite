@@ -17,7 +17,9 @@ import {
   Bell,
   CreditCard,
   FileKey,
-  PenLine
+  PenLine,
+  MessageSquare,
+  User
 } from 'lucide-react';
 
 interface AuditTimelineProps {
@@ -38,6 +40,7 @@ const eventConfig: Record<AuditEvent['type'], {
   rejected: { icon: XCircle, label: 'Rechazado', color: 'text-destructive' },
   modified: { icon: Edit3, label: 'Modificado', color: 'text-muted-foreground' },
   trashed: { icon: Trash2, label: 'Enviado a Papelera', color: 'text-muted-foreground' },
+  commented: { icon: MessageSquare, label: 'Comentario', color: 'text-blue-500' },
 };
 
 const getMethodIcon = (method?: string) => {
@@ -132,8 +135,25 @@ export function AuditTimeline({ events, compact = false }: AuditTimelineProps) {
                   {/* Metadata section */}
                   {(event.metadata.ipAddress || event.metadata.userAgent || event.metadata.location || 
                     event.metadata.signerName || event.metadata.recipientEmail || event.metadata.rejectionReason ||
-                    event.metadata.signatureMethod || event.metadata.trashReason || event.metadata.signatureHash) && (
+                    event.metadata.signatureMethod || event.metadata.trashReason || event.metadata.signatureHash ||
+                    event.metadata.comment || event.metadata.creatorName) && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+                      {/* Creator name for 'created' events */}
+                      {event.metadata.creatorName && event.type === 'created' && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <User className="h-3 w-3" />
+                          <span>Creador: <strong>{event.metadata.creatorName}</strong></span>
+                        </div>
+                      )}
+
+                      {/* Comment text */}
+                      {event.metadata.comment && event.type === 'commented' && (
+                        <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
+                          <span>"{event.metadata.comment}"</span>
+                        </div>
+                      )}
+
                       {/* Sent notification details */}
                       {event.metadata.recipientEmail && event.type === 'sent' && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -146,7 +166,7 @@ export function AuditTimeline({ events, compact = false }: AuditTimelineProps) {
                       {event.metadata.signerName && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <CheckCircle2 className="h-3 w-3" />
-                          <span>Firmante: {event.metadata.signerName}</span>
+                          <span>{event.type === 'rejected' ? 'Rechazado por' : 'Firmante'}: <strong>{event.metadata.signerName}</strong></span>
                         </div>
                       )}
                       

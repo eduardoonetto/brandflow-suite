@@ -95,7 +95,7 @@ export default function Register() {
               <Label htmlFor="name">Nombre Completo</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input id="name" type="text" placeholder="Juan Pérez" value={name} onChange={(e) => setName(e.target.value)} className="pl-10 h-12" required />
+                <Input id="name" type="text" placeholder="Juan Pérez" value={name} onChange={(e) => setName(e.target.value)} className="pl-10 h-12 focus-visible:ring-[#2563eb] border-input" required />
               </div>
             </div>
 
@@ -103,7 +103,7 @@ export default function Register() {
               <Label htmlFor="email">Correo Electrónico</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input id="email" type="email" placeholder="nombre@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12" required />
+                <Input id="email" type="email" placeholder="nombre@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12 focus-visible:ring-[#2563eb] border-input" required />
               </div>
             </div>
 
@@ -111,7 +111,7 @@ export default function Register() {
               <Label htmlFor="password">Contraseña</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12" required />
+                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12 focus-visible:ring-[#2563eb] border-input" required />
               </div>
             </div>
 
@@ -119,7 +119,7 @@ export default function Register() {
               <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input id="confirmPassword" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="pl-10 h-12" required />
+                <Input id="confirmPassword" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="pl-10 h-12 focus-visible:ring-[#2563eb] border-input" required />
               </div>
             </div>
 
