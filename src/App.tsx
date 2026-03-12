@@ -22,6 +22,7 @@ import Settings from "@/pages/Settings";
 import InstitutionsAdmin from "@/pages/admin/InstitutionsAdmin";
 import NotFound from "@/pages/NotFound";
 import ApiDocsPage from "@/pages/ApiDocsPage";
+import EmailTemplatesPage from "@/pages/EmailTemplatesPage";
 
 const queryClient = new QueryClient();
 
