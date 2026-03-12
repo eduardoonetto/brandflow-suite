@@ -63,6 +63,9 @@ function AppRoutes() {
         <Route path="/templates/:id" element={<DocumentEditor />} />
         <Route path="/templates/:id/edit" element={<DocumentEditor />} />
         
+        {/* Email Templates */}
+        <Route path="/email-templates" element={<EmailTemplatesPage />} />
+        
         {/* Reports */}
         <Route path="/reports" element={<ReportsPage />} />
         

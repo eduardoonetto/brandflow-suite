@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Tabs,
   TabsContent,
@@ -41,15 +42,31 @@ import {
   FileText,
   Trash2,
   UserPlus,
-  Info
+  Info,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AuditEvent, DocumentStatus, DocumentSigner } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
-// Mock audit events - now dynamically generated based on document
-function generateAuditEvents(doc: any, templates: any[]): AuditEvent[] {
+const CURRENT_USER_ID = 'user-1';
+
+// Helper to get creator display info
+function getCreatorInfo(createdBy: string): { name: string; email: string } {
+  const creators: Record<string, { name: string; email: string }> = {
+    'user-1': { name: 'John Smith', email: 'admin@acme.com' },
+    'user-2': { name: 'María García', email: 'maria@acme.com' },
+    'user-3': { name: 'Carlos Rodríguez', email: 'carlos@acme.com' },
+    'user-4': { name: 'Ana Torres', email: 'ana@acme.com' },
+    'user-5': { name: 'Pedro López', email: 'pedro@acme.com' },
+  };
+  return creators[createdBy] || { name: 'Usuario desconocido', email: '' };
+}
+
+// Mock audit events - dynamically generated based on document
+function generateAuditEvents(doc: any, templates: any[], comments: CommentEntry[]): AuditEvent[] {
+  const creatorInfo = getCreatorInfo(doc?.createdBy || 'user-1');
   const events: AuditEvent[] = [
     {
       id: 'evt-1',
@@ -57,18 +74,15 @@ function generateAuditEvents(doc: any, templates: any[]): AuditEvent[] {
       type: 'created',
       timestamp: doc?.createdAt || new Date(Date.now() - 86400000 * 5),
       actorId: doc?.createdBy || 'user-1',
-      actorEmail: doc?.createdBy === 'user-1' ? 'admin@acme.com' : 
-                  doc?.createdBy === 'user-2' ? 'maria@acme.com' : 
-                  doc?.createdBy === 'user-3' ? 'carlos@acme.com' :
-                  doc?.createdBy === 'user-4' ? 'ana@acme.com' :
-                  doc?.createdBy === 'user-5' ? 'pedro@acme.com' : 'admin@acme.com',
-      metadata: {},
+      actorEmail: creatorInfo.email,
+      metadata: {
+        creatorName: creatorInfo.name,
+      },
     },
   ];
 
   if (doc?.signers) {
     doc.signers.forEach((signer: DocumentSigner, idx: number) => {
-      // Add sent notification
       events.push({
         id: `evt-sent-${idx}`,
         documentId: doc.id,
@@ -114,6 +128,19 @@ function generateAuditEvents(doc: any, templates: any[]): AuditEvent[] {
     });
   }
 
+  // Add comments to trace
+  comments.forEach((comment) => {
+    events.push({
+      id: comment.id,
+      documentId: doc.id,
+      type: 'commented',
+      timestamp: comment.timestamp,
+      actorId: comment.actorId,
+      actorEmail: comment.actorEmail,
+      metadata: { comment: comment.text },
+    });
+  });
+
   // Add trash event
   if (doc?.status === 'trashed' && doc.trashedAt) {
     events.push({
@@ -122,28 +149,22 @@ function generateAuditEvents(doc: any, templates: any[]): AuditEvent[] {
       type: 'trashed',
       timestamp: doc.trashedAt,
       actorId: doc.createdBy,
-      actorEmail: doc.createdBy === 'user-1' ? 'admin@acme.com' : 'unknown@acme.com',
+      actorEmail: getCreatorInfo(doc.createdBy).email,
       metadata: { trashReason: doc.trashReason || '' },
     });
   }
 
-  // Sort by timestamp
   events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   return events;
 }
 
-const CURRENT_USER_ID = 'user-1';
-
-// Helper to get creator display info
-function getCreatorInfo(createdBy: string): { name: string; email: string } {
-  const creators: Record<string, { name: string; email: string }> = {
-    'user-1': { name: 'John Smith', email: 'admin@acme.com' },
-    'user-2': { name: 'María García', email: 'maria@acme.com' },
-    'user-3': { name: 'Carlos Rodríguez', email: 'carlos@acme.com' },
-    'user-4': { name: 'Ana Torres', email: 'ana@acme.com' },
-    'user-5': { name: 'Pedro López', email: 'pedro@acme.com' },
-  };
-  return creators[createdBy] || { name: 'Usuario desconocido', email: '' };
+interface CommentEntry {
+  id: string;
+  text: string;
+  actorId: string;
+  actorEmail: string;
+  actorName: string;
+  timestamp: Date;
 }
 
 export default function DocumentEditor() {
@@ -164,7 +185,6 @@ export default function DocumentEditor() {
   const existingTemplate = templates.find(t => t.id === id);
   const sourceTemplate = templateIdFromQuery ? templates.find(t => t.id === templateIdFromQuery) : null;
   
-  // Determine if this is a PDF-based document
   const isPdfTemplate = existingTemplate?.templateType === 'upload';
   const isDocFromPdfTemplate = existingDoc?.templateId ? templates.find(t => t.id === existingDoc.templateId)?.templateType === 'upload' : false;
   const isPdfMode = isPdfTemplate || isDocFromPdfTemplate;
@@ -182,6 +202,10 @@ export default function DocumentEditor() {
   const [showTrashModal, setShowTrashModal] = useState(false);
   const [configuredSigners, setConfiguredSigners] = useState<Omit<DocumentSigner, 'id' | 'documentId' | 'status'>[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Comments
+  const [comments, setComments] = useState<CommentEntry[]>([]);
+  const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
     if (sourceTemplate) {
@@ -214,18 +238,11 @@ export default function DocumentEditor() {
     }
   }, [entityData, sourceTemplate]);
 
-  // Set active tab when isPdfMode changes
   useEffect(() => {
     if (isPdfMode) setActiveTab('preview');
   }, [isPdfMode]);
 
-  const { 
-    variables, 
-    values, 
-    parseContent, 
-    setValue, 
-    getCompletionPercentage 
-  } = useDocumentVariables();
+  const { variables, values, parseContent, setValue, getCompletionPercentage } = useDocumentVariables();
 
   useEffect(() => {
     const plainContent = content.replace(/<[^>]+>/g, '');
@@ -252,9 +269,7 @@ export default function DocumentEditor() {
     
     if (isTemplatePath && existingTemplate) {
       updateTemplate(existingTemplate.id, {
-        title,
-        description,
-        content,
+        title, description, content,
         tags: docTags,
         variables: variables.map(v => ({ ...v, value: values[v.key] })),
       });
@@ -262,8 +277,7 @@ export default function DocumentEditor() {
     } else if (sourceTemplate || (isNew && !isTemplatePath)) {
       addDocument({
         templateId: sourceTemplate?.id,
-        title,
-        description,
+        title, description,
         content: isPdfMode ? 'Documento PDF subido' : content,
         status: 'pending',
         tags: docTags,
@@ -284,9 +298,7 @@ export default function DocumentEditor() {
       return;
     } else if (existingDoc) {
       updateDocument(id!, {
-        title,
-        content,
-        status,
+        title, content, status,
         tags: docTags,
         variables: variables.map(v => ({ ...v, value: values[v.key] })),
       });
@@ -307,7 +319,6 @@ export default function DocumentEditor() {
     setConfiguredSigners(prev => [...prev, ...signers]);
     setShowSignerModal(false);
     
-    // If adding to existing document, also update the document
     if (existingDoc && !isNew) {
       const newSigners = signers.map((s, idx) => ({
         ...s,
@@ -339,12 +350,23 @@ export default function DocumentEditor() {
     }
   };
 
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    const comment: CommentEntry = {
+      id: `comment-${Date.now()}`,
+      text: newComment.trim(),
+      actorId: CURRENT_USER_ID,
+      actorEmail: 'admin@acme.com',
+      actorName: 'John Smith',
+      timestamp: new Date(),
+    };
+    setComments(prev => [...prev, comment]);
+    setNewComment('');
+    toast({ title: 'Comentario agregado', description: 'El comentario ha sido añadido a la traza del documento' });
+  };
+
   const toggleTag = (tagId: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(t => t !== tagId)
-        : [...prev, tagId]
-    );
+    setSelectedTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
   };
 
   const handleTagCreate = (name: string, color: string) => {
@@ -354,24 +376,22 @@ export default function DocumentEditor() {
 
   const showHistoryTab = !isNew && (existingDoc?.signers?.length > 0 || existingDoc?.status === 'trashed');
   const showSendButton = sourceTemplate || (isTemplatePath && existingTemplate);
-  const showPdfViewer = isPdfMode && (existingTemplate?.pdfUrl || sourceTemplate?.pdfUrl);
   const pdfUrl = existingTemplate?.pdfUrl || sourceTemplate?.pdfUrl || '/sample.pdf';
 
-  // Can trash: only creator, not fully signed, not already trashed
   const canTrash = existingDoc && 
     existingDoc.createdBy === CURRENT_USER_ID && 
     existingDoc.status !== 'trashed' && 
     existingDoc.status !== 'signed';
 
-  // Can add signer: document exists, not fully signed
   const allSigned = existingDoc?.signers?.every(s => s.status === 'signed') || false;
   const canAddSigner = existingDoc && !isNew && existingDoc.status !== 'trashed' && !allSigned;
 
-  // Creator info
   const creatorInfo = existingDoc ? getCreatorInfo(existingDoc.createdBy) : null;
 
-  // Dynamic audit events
-  const auditEvents = existingDoc ? generateAuditEvents(existingDoc, templates) : [];
+  const auditEvents = existingDoc ? generateAuditEvents(existingDoc, templates, comments) : [];
+
+  // Show comment section for pending/rejected documents
+  const showCommentSection = existingDoc && !isNew && (existingDoc.status === 'pending' || existingDoc.status === 'rejected');
 
   if (isSaving) {
     return (
@@ -456,20 +476,14 @@ export default function DocumentEditor() {
           </Button>
           
           {showSendButton && (
-            <Button
-              className="bg-gradient-primary hover:opacity-90"
-              onClick={handleSendToSign}
-            >
+            <Button className="bg-gradient-primary hover:opacity-90" onClick={handleSendToSign}>
               <Send className="h-4 w-4 mr-2" />
               Enviar a Firmar
             </Button>
           )}
           
           {!isNew && status === 'pending' && !isTemplatePath && (
-            <Button
-              variant="outline"
-              onClick={() => setShowSignatureModal(true)}
-            >
+            <Button variant="outline" onClick={() => setShowSignatureModal(true)}>
               <PenLine className="h-4 w-4 mr-2" />
               Firmar
             </Button>
@@ -479,7 +493,6 @@ export default function DocumentEditor() {
 
       {/* Main content */}
       <div className="flex-1 flex gap-4 min-h-0">
-        {/* Editor / Preview area */}
         <div className="flex-1 flex flex-col min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-4">
@@ -498,6 +511,12 @@ export default function DocumentEditor() {
                   <Users className="h-4 w-4" />
                   Firmantes ({configuredSigners.length})
                 </TabsTrigger>
+                {showCommentSection && (
+                  <TabsTrigger value="comments" className="gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Comentarios ({comments.length})
+                  </TabsTrigger>
+                )}
                 {showHistoryTab && (
                   <TabsTrigger value="history" className="gap-2">
                     <History className="h-4 w-4" />
@@ -519,9 +538,7 @@ export default function DocumentEditor() {
                 <div className="h-full flex flex-col gap-4">
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                      <Label className="text-xs text-muted-foreground">
-                        Contenido del documento
-                      </Label>
+                      <Label className="text-xs text-muted-foreground">Contenido del documento</Label>
                     </div>
                     <RichTextEditor
                       content={content}
@@ -591,6 +608,60 @@ export default function DocumentEditor() {
                 </Button>
               </div>
             </TabsContent>
+
+            {/* Comments Tab */}
+            {showCommentSection && (
+              <TabsContent value="comments" className="flex-1 m-0">
+                <div className="space-y-4">
+                  <div className="bg-card border rounded-xl p-4 space-y-3">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Agregar Comentario
+                    </h4>
+                    <Textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Escribe un comentario sobre este documento..."
+                      className="min-h-[100px]"
+                    />
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={handleAddComment} 
+                        disabled={!newComment.trim()}
+                        size="sm"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Comentar
+                      </Button>
+                    </div>
+                  </div>
+
+                  {comments.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground">Comentarios ({comments.length})</h4>
+                      {comments.map((comment) => (
+                        <div key={comment.id} className="bg-muted/50 rounded-lg p-3 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{comment.actorName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {comment.timestamp.toLocaleString('es-CL')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{comment.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {comments.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No hay comentarios aún</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            )}
             
             {showHistoryTab && (
               <TabsContent value="history" className="flex-1 m-0 overflow-y-auto">
@@ -600,7 +671,7 @@ export default function DocumentEditor() {
           </Tabs>
         </div>
 
-        {/* Variable panel - only show for template-type docs */}
+        {/* Variable panel */}
         {!isPdfMode && variables.length > 0 && (
           <div className="w-80 shrink-0">
             <VariablePanel

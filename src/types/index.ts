@@ -152,7 +152,7 @@ export interface Signature {
 export interface AuditEvent {
   id: string;
   documentId: string;
-  type: 'created' | 'sent' | 'delivered' | 'opened' | 'signed' | 'rejected' | 'modified' | 'trashed';
+  type: 'created' | 'sent' | 'delivered' | 'opened' | 'signed' | 'rejected' | 'modified' | 'trashed' | 'commented';
   timestamp: Date;
   actorId: string;
   actorEmail: string;
@@ -166,6 +166,8 @@ export interface AuditEvent {
     signatureMethod?: string;
     rejectionReason?: string;
     trashReason?: string;
+    comment?: string;
+    creatorName?: string;
   };
 }
 

@@ -32,12 +32,10 @@ import {
   Plus, 
   Building2, 
   Palette, 
-  Globe, 
   Key,
   Edit3,
   Trash2,
   Upload,
-  Check,
   Loader2,
   RefreshCw,
   Copy,
@@ -48,15 +46,48 @@ import { formatDate } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { TableSkeleton } from '@/components/ui/loading-overlay';
+import codelcoLogo from '@/assets/codelco-logo.png';
+import falabellaLogo from '@/assets/falabella-logo.png';
 
-const colorPresets = [
-  { name: 'Azul', value: '220 80% 45%' },
-  { name: 'Teal', value: '175 65% 42%' },
-  { name: 'Púrpura', value: '280 70% 50%' },
-  { name: 'Verde', value: '142 71% 45%' },
-  { name: 'Rojo', value: '0 84% 60%' },
-  { name: 'Naranja', value: '25 95% 53%' },
-];
+// HSL <-> Hex conversion utilities
+function hslToHex(hslStr: string): string {
+  const parts = hslStr.replace(/%/g, '').split(' ');
+  const h = parseFloat(parts[0]) || 0;
+  const s = (parseFloat(parts[1]) || 0) / 100;
+  const l = (parseFloat(parts[2]) || 0) / 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function hexToHsl(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) * 60; break;
+      case g: h = ((b - r) / d + 2) * 60; break;
+      case b: h = ((r - g) / d + 4) * 60; break;
+    }
+  }
+  return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+// Institution logo mapping
+const institutionLogoMap: Record<string, string> = {
+  'inst-acme': codelcoLogo,
+  'inst-tech': falabellaLogo,
+};
 
 export default function InstitutionsAdmin() {
   const { setTheme } = useTheme();
@@ -68,13 +99,13 @@ export default function InstitutionsAdmin() {
   const [isSaving, setIsSaving] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [hexColor, setHexColor] = useState('#1a6dcc');
 
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     taxId: '',
     apiKey: '',
-    allowedDomain: '',
     primaryColor: '220 80% 45%',
     logoUrl: '',
   });
@@ -86,10 +117,14 @@ export default function InstitutionsAdmin() {
   const fetchInstitutions = async () => {
     setIsLoading(true);
     try {
-      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
       const response = await institutionService.getAll();
-      setInstitutions(response.data);
+      // Enrich with logos
+      const enriched = response.data.map(inst => ({
+        ...inst,
+        logoUrl: inst.logoUrl || institutionLogoMap[inst.id] || '',
+      }));
+      setInstitutions(enriched);
     } catch (error) {
       console.error('Failed to fetch institutions:', error);
     }
@@ -99,24 +134,25 @@ export default function InstitutionsAdmin() {
   const handleOpenDialog = (institution?: Institution) => {
     if (institution) {
       setEditingInstitution(institution);
+      const color = institution.primaryColor;
       setFormData({
         name: institution.name,
         taxId: institution.taxId || '',
         apiKey: institution.apiKey || '',
-        allowedDomain: institution.allowedDomain || '',
-        primaryColor: institution.primaryColor,
+        primaryColor: color,
         logoUrl: institution.logoUrl,
       });
+      setHexColor(hslToHex(color));
     } else {
       setEditingInstitution(null);
       setFormData({
         name: '',
         taxId: '',
         apiKey: generateApiKey(),
-        allowedDomain: '',
         primaryColor: '220 80% 45%',
         logoUrl: '',
       });
+      setHexColor('#1a6dcc');
     }
     setShowApiKey(false);
     setIsDialogOpen(true);
@@ -125,29 +161,19 @@ export default function InstitutionsAdmin() {
   const handleGenerateNewApiKey = () => {
     const newKey = generateApiKey();
     setFormData(prev => ({ ...prev, apiKey: newKey }));
-    toast({
-      title: 'API Key generada',
-      description: 'Se ha generado una nueva API Key',
-    });
+    toast({ title: 'API Key generada', description: 'Se ha generado una nueva API Key' });
   };
 
   const handleCopyApiKey = () => {
     navigator.clipboard.writeText(formData.apiKey);
-    toast({
-      title: 'Copiado',
-      description: 'API Key copiada al portapapeles',
-    });
+    toast({ title: 'Copiado', description: 'API Key copiada al portapapeles' });
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        toast({
-          title: 'Archivo muy grande',
-          description: 'El logo no debe superar 2MB',
-          variant: 'destructive',
-        });
+        toast({ title: 'Archivo muy grande', description: 'El logo no debe superar 2MB', variant: 'destructive' });
         return;
       }
       const reader = new FileReader();
@@ -158,10 +184,25 @@ export default function InstitutionsAdmin() {
     }
   };
 
+  const handleColorPickerChange = (hex: string) => {
+    setHexColor(hex);
+    const hsl = hexToHsl(hex);
+    setFormData(prev => ({ ...prev, primaryColor: hsl }));
+    setTheme({ primaryColor: hsl });
+  };
+
+  const handleHexInputChange = (value: string) => {
+    setHexColor(value);
+    if (/^#[0-9a-fA-F]{6}$/.test(value)) {
+      const hsl = hexToHsl(value);
+      setFormData(prev => ({ ...prev, primaryColor: hsl }));
+      setTheme({ primaryColor: hsl });
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1200));
       if (editingInstitution) {
         await institutionService.update(editingInstitution.id, formData);
@@ -176,33 +217,20 @@ export default function InstitutionsAdmin() {
       });
     } catch (error) {
       console.error('Failed to save institution:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo guardar la institución',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'No se pudo guardar la institución', variant: 'destructive' });
     }
     setIsSaving(false);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Está seguro de eliminar esta institución?')) return;
-    
     try {
       await institutionService.delete(id);
       await fetchInstitutions();
-      toast({
-        title: 'Institución eliminada',
-        description: 'La institución ha sido eliminada correctamente',
-      });
+      toast({ title: 'Institución eliminada', description: 'La institución ha sido eliminada correctamente' });
     } catch (error) {
       console.error('Failed to delete institution:', error);
     }
-  };
-
-  const handlePreviewTheme = (color: string) => {
-    setFormData(prev => ({ ...prev, primaryColor: color }));
-    setTheme({ primaryColor: color });
   };
 
   return (
@@ -215,11 +243,7 @@ export default function InstitutionsAdmin() {
             Administre las empresas cliente y su configuración de branding
           </p>
         </div>
-        
-        <Button 
-          onClick={() => handleOpenDialog()}
-          className="bg-gradient-primary hover:opacity-90"
-        >
+        <Button onClick={() => handleOpenDialog()} className="bg-gradient-primary hover:opacity-90">
           <Plus className="h-4 w-4 mr-2" />
           Nueva Institución
         </Button>
@@ -229,9 +253,7 @@ export default function InstitutionsAdmin() {
       <Card>
         <CardHeader>
           <CardTitle>Instituciones Registradas</CardTitle>
-          <CardDescription>
-            Lista de todas las empresas configuradas en la plataforma
-          </CardDescription>
+          <CardDescription>Lista de todas las empresas configuradas en la plataforma</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {isLoading ? (
@@ -242,7 +264,6 @@ export default function InstitutionsAdmin() {
               <TableRow>
                 <TableHead>Institución</TableHead>
                 <TableHead className="hidden md:table-cell">ID Tributario</TableHead>
-                <TableHead className="hidden lg:table-cell">Dominio</TableHead>
                 <TableHead className="hidden sm:table-cell">Color</TableHead>
                 <TableHead className="hidden lg:table-cell">Creado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -254,14 +275,13 @@ export default function InstitutionsAdmin() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div 
-                        className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `hsl(${institution.primaryColor} / 0.15)` }}
+                        className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-muted"
                       >
                         {institution.logoUrl ? (
                           <img 
                             src={institution.logoUrl} 
                             alt={institution.name}
-                            className="h-6 w-6 object-contain"
+                            className="h-8 w-8 object-contain rounded"
                           />
                         ) : (
                           <Building2 
@@ -281,36 +301,24 @@ export default function InstitutionsAdmin() {
                   <TableCell className="font-mono text-sm hidden md:table-cell">
                     {institution.taxId}
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <div className="flex items-center gap-1.5">
-                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm">{institution.allowedDomain}</span>
-                    </div>
-                  </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <div 
-                      className="h-6 w-12 rounded-md border"
-                      style={{ backgroundColor: `hsl(${institution.primaryColor})` }}
-                    />
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="h-6 w-12 rounded-md border"
+                        style={{ backgroundColor: `hsl(${institution.primaryColor})` }}
+                      />
+                      <span className="text-xs text-muted-foreground font-mono">{hslToHex(institution.primaryColor)}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground hidden lg:table-cell">
                     {formatDate(institution.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(institution)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(institution)}>
                         <Edit3 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(institution.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(institution.id)} className="text-destructive hover:text-destructive">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -327,12 +335,8 @@ export default function InstitutionsAdmin() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingInstitution ? 'Editar Institución' : 'Nueva Institución'}
-            </DialogTitle>
-            <DialogDescription>
-              Configure los datos de la empresa y su branding personalizado
-            </DialogDescription>
+            <DialogTitle>{editingInstitution ? 'Editar Institución' : 'Nueva Institución'}</DialogTitle>
+            <DialogDescription>Configure los datos de la empresa y su branding personalizado</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -350,19 +354,7 @@ export default function InstitutionsAdmin() {
                 <Input
                   value={formData.taxId}
                   onChange={(e) => setFormData(prev => ({ ...prev, taxId: e.target.value }))}
-                  placeholder="12-3456789"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Dominio Permitido</Label>
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                <Input
-                  value={formData.allowedDomain}
-                  onChange={(e) => setFormData(prev => ({ ...prev, allowedDomain: e.target.value }))}
-                  placeholder="empresa.tufirmaok.cl"
+                  placeholder="76.196.080-4"
                 />
               </div>
             </div>
@@ -388,58 +380,59 @@ export default function InstitutionsAdmin() {
                     {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={handleCopyApiKey}
-                  title="Copiar"
-                >
+                <Button type="button" variant="outline" size="icon" onClick={handleCopyApiKey} title="Copiar">
                   <Copy className="h-4 w-4" />
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={handleGenerateNewApiKey}
-                  title="Generar nueva"
-                >
+                <Button type="button" variant="outline" size="icon" onClick={handleGenerateNewApiKey} title="Generar nueva">
                   <RefreshCw className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Use esta API Key para integrar con sistemas externos
-              </p>
+              <p className="text-xs text-muted-foreground">Use esta API Key para integrar con sistemas externos</p>
             </div>
 
+            {/* Color Picker */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Palette className="h-4 w-4" />
                 Color Principal
               </Label>
-              <div className="flex flex-wrap gap-2">
-                {colorPresets.map((color) => (
-                  <button
-                    key={color.value}
-                    type="button"
-                    onClick={() => handlePreviewTheme(color.value)}
-                    className={cn(
-                      'h-10 w-10 rounded-lg border-2 transition-all',
-                      formData.primaryColor === color.value 
-                        ? 'border-foreground scale-110' 
-                        : 'border-transparent hover:scale-105'
-                    )}
-                    style={{ backgroundColor: `hsl(${color.value})` }}
-                    title={color.name}
-                  >
-                    {formData.primaryColor === color.value && (
-                      <Check className="h-5 w-5 mx-auto text-white" />
-                    )}
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <input
+                    type="color"
+                    value={hexColor}
+                    onChange={(e) => handleColorPickerChange(e.target.value)}
+                    className="w-12 h-12 rounded-lg border-2 border-border cursor-pointer p-0.5"
+                    style={{ backgroundColor: 'transparent' }}
+                  />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground w-8">HEX</Label>
+                    <Input
+                      value={hexColor}
+                      onChange={(e) => handleHexInputChange(e.target.value)}
+                      placeholder="#000000"
+                      className="font-mono text-sm h-9"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground w-8">HSL</Label>
+                    <Input
+                      value={formData.primaryColor}
+                      readOnly
+                      className="font-mono text-sm h-9 bg-muted text-muted-foreground"
+                    />
+                  </div>
+                </div>
               </div>
+              <div 
+                className="h-8 rounded-lg border mt-2"
+                style={{ backgroundColor: `hsl(${formData.primaryColor})` }}
+              />
             </div>
 
+            {/* Logo */}
             <div className="space-y-2">
               <Label>Logo de Empresa</Label>
               <input
@@ -468,12 +461,8 @@ export default function InstitutionsAdmin() {
                 ) : (
                   <>
                     <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Arrastre o haga clic para subir
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      PNG, JPG o SVG (max. 2MB)
-                    </p>
+                    <p className="text-sm text-muted-foreground">Arrastre o haga clic para subir</p>
+                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG o SVG (max. 2MB)</p>
                   </>
                 )}
               </div>
@@ -481,17 +470,13 @@ export default function InstitutionsAdmin() {
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
             <Button 
               onClick={handleSave}
               disabled={isSaving || !formData.name || !formData.taxId}
               className="bg-gradient-primary"
             >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : null}
+              {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               {editingInstitution ? 'Guardar Cambios' : 'Crear Institución'}
             </Button>
           </div>

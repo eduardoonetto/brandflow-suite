@@ -18,6 +18,7 @@ import {
   FileClock,
   Trash2,
   Shield,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
