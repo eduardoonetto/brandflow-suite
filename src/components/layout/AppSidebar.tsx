@@ -60,6 +60,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
 
   if (!isPersonalInstitution) {
     mainNavItems.push({ icon: FileStack, label: 'Plantillas', path: '/templates' });
+    mainNavItems.push({ icon: Mail, label: 'Correos', path: '/email-templates' });
   }
 
   const documentNavItems = [
